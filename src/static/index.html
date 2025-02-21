@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Player</title>
+</head>
+<body>
+    <h1>Latest Response from Piper TTS</h1>
+
+    <p id="responseText">Waiting for response...</p>
+
+    <script>
+        // Running on port 11405
+        var socket = new WebSocket("ws://" + window.location.hostname + ":11405/ws");
+
+        socket.onmessage = function (event) {
+            var data = JSON.parse(event.data);
+
+            if (data.type === "new_audio") {
+                var audioPlayer = document.getElementById("audioPlayer");
+                var audioSource = document.getElementById("audioSource");
+                
+                audioSource.src = window.location.origin + data.audio_file;
+                document.getElementById("responseText").innerText = "Playing: " + data.audio_file;
+
+                audioPlayer.load();
+                audioPlayer.play().catch(error => {});
+            }
+        };
+    </script>
+</body>
+</html>
