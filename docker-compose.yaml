@@ -1,0 +1,23 @@
+# Docker compose file for Piper TTS instance. Required for vCHAOS backend
+version: "3.8"
+
+services:
+  piper-gpu:
+    container_name: piper-gpu
+    image: ghcr.io/slackr31337/wyoming-piper-gpu:latest
+    ports:
+      - 10200:10200
+    volumes:
+      - ${PWD}/data:/data
+      - ${PWD}/tmp:/tmp
+      - ${PWD}/output:/output
+      - ${PWD}/handler.py:/usr/lib/python3.10/dist-packages/wyoming_piper/handler.py
+    restart: always
+    command: --voice en_US-amy-medium 
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
