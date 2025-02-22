@@ -18,7 +18,6 @@ from .process import PiperProcessManager
 
 _LOGGER = logging.getLogger(__name__)
 
-
 class PiperEventHandler(AsyncEventHandler):
     def __init__(
         self,
@@ -48,84 +47,62 @@ class PiperEventHandler(AsyncEventHandler):
         _LOGGER.debug(synthesize)
 
         raw_text = synthesize.text
-
-        # Join multiple lines
         text = " ".join(raw_text.strip().splitlines())
 
         if self.cli_args.auto_punctuation and text:
-            # Add automatic punctuation (important for some voices)
-            has_punctuation = False
-            for punc_char in self.cli_args.auto_punctuation:
-                if text[-1] == punc_char:
-                    has_punctuation = True
-                    break
-
-            if not has_punctuation:
-                text = text + self.cli_args.auto_punctuation[0]
+            if text[-1] not in self.cli_args.auto_punctuation:
+                text += self.cli_args.auto_punctuation[0]
 
         async with self.process_manager.processes_lock:
             _LOGGER.debug("synthesize: raw_text=%s, text='%s'", raw_text, text)
-            voice_name: Optional[str] = None
-            voice_speaker: Optional[str] = None
+            voice_name = None
+            voice_speaker = None
             if synthesize.voice is not None:
                 voice_name = synthesize.voice.name
                 voice_speaker = synthesize.voice.speaker
 
             piper_proc = await self.process_manager.get_process(voice_name=voice_name)
-
             assert piper_proc.proc.stdin is not None
             assert piper_proc.proc.stdout is not None
 
-            # JSON in, file path out
-            input_obj: Dict[str, Any] = {"text": text}
+            input_obj = {"text": text}
             if voice_speaker is not None:
                 speaker_id = piper_proc.get_speaker_id(voice_speaker)
                 if speaker_id is not None:
                     input_obj["speaker_id"] = speaker_id
                 else:
-                    _LOGGER.warning(
-                        "No speaker '%s' for voice '%s'", voice_speaker, voice_name
-                    )
+                    _LOGGER.warning("No speaker '%s' for voice '%s'", voice_speaker, voice_name)
 
             _LOGGER.debug("input: %s", input_obj)
-            piper_proc.proc.stdin.write(
-                (json.dumps(input_obj, ensure_ascii=False) + "\n").encode()
-            )
+            piper_proc.proc.stdin.write((json.dumps(input_obj, ensure_ascii=False) + "\n").encode())
             await piper_proc.proc.stdin.drain()
 
             output_path = (await piper_proc.proc.stdout.readline()).decode().strip()
             _LOGGER.debug(output_path)
 
-        # Define shared output folder with Piper Docker instance
-        destination_dir = r"/output"
+        # Define output directory
+        destination_dir = "/output"
         text_output_path = os.path.join(destination_dir, os.path.basename(output_path).replace(".wav", ".txt"))
-        
+
         with open(text_output_path, "w", encoding="utf-8") as text_file:
             text_file.write(text)
             _LOGGER.info(f"Saved Ollama output text to {text_output_path}")
-          
+
         destination_path = os.path.join(destination_dir, os.path.basename(output_path))
         os.makedirs(destination_dir, exist_ok=True)
         shutil.move(output_path, destination_path)
         _LOGGER.info(f"Moved .wav file to {destination_path}")
 
-        # Write empty .wav file to skip audio output on ESP32/Voice PE (TODO: Add a setting option to enable)
+        # Notify FastAPI backend
+        self.notify_backend(destination_path)
+
+        # Generate an empty placeholder `.wav` file
         with open(output_path, "wb") as empty_wav:
-          empty_wav.write(
-              b"RIFF"
-              b"\x2C\x00\x00\x00"
-              b"WAVE"
-              b"fmt "
-              b"\x10\x00\x00\x00"
-              b"\x01\x00"
-              b"\x01\x00"
-              b"\x22\x56\x00\x00"
-              b"\x44\xAC\x00\x00"
-              b"\x02\x00"
-              b"\x10\x00"
-              b"data"
-              b"\x00\x00\x00\x00"
-          )
+            empty_wav.write(
+                b"RIFF" b"\x2C\x00\x00\x00" b"WAVE" b"fmt " b"\x10\x00\x00\x00"
+                b"\x01\x00" b"\x01\x00" b"\x22\x56\x00\x00" b"\x44\xAC\x00\x00"
+                b"\x02\x00" b"\x10\x00" b"data" b"\x00\x00\x00\x00"
+            )
 
         wav_file: wave.Wave_read = wave.open(output_path, "rb")
         with wav_file:
@@ -133,36 +110,32 @@ class PiperEventHandler(AsyncEventHandler):
             width = wav_file.getsampwidth()
             channels = wav_file.getnchannels()
 
-            await self.write_event(
-                AudioStart(
-                    rate=rate,
-                    width=width,
-                    channels=channels,
-                ).event(),
-            )
-            
-            # Audio
+            await self.write_event(AudioStart(rate=rate, width=width, channels=channels).event())
+
             audio_bytes = wav_file.readframes(wav_file.getnframes())
             bytes_per_sample = width * channels
             bytes_per_chunk = bytes_per_sample * self.cli_args.samples_per_chunk
             num_chunks = int(math.ceil(len(audio_bytes) / bytes_per_chunk))
 
-            # Split into chunks
             for i in range(num_chunks):
                 offset = i * bytes_per_chunk
-                chunk = audio_bytes[offset : offset + bytes_per_chunk]
-                await self.write_event(
-                    AudioChunk(
-                        audio=chunk,
-                        rate=rate,
-                        width=width,
-                        channels=channels,
-                    ).event(),
-                )
+                chunk = audio_bytes[offset: offset + bytes_per_chunk]
+                await self.write_event(AudioChunk(audio=chunk, rate=rate, width=width, channels=channels).event())
 
         await self.write_event(AudioStop().event())
         _LOGGER.info("Completed request")
-      
-        os.unlink(output_path)
 
+        os.unlink(output_path)
         return True
+
+    def notify_backend(self, audio_path: str):
+        """Writes a notification file to signal the FastAPI backend."""
+        notification_file = "/output/new_audio.json"
+        message = {"type": "new_audio", "audio_file": f"/output/{os.path.basename(audio_path)}"}
+        
+        try:
+            with open(notification_file, "w", encoding="utf-8") as f:
+                json.dump(message, f)
+            _LOGGER.info(f"Wrote notification file: {notification_file}")
+        except Exception as e:
+            _LOGGER.error(f"Failed to write notification file: {e}")
