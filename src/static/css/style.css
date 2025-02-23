@@ -19,14 +19,15 @@ body {
     position: absolute;
     top: 10px;
     left: 10px;
-    z-index: 1
+    z-index: 1;
+    pointer-events: none;
 }
 
 .top-right-container {
     position: absolute;
     top: 10px;
     right: 10px;
-    z-index: 1
+    z-index: 1;
 }
 
 .connected {
@@ -34,7 +35,6 @@ body {
     color: white;
     padding: 10px;
     border: none;
-    cursor: pointer;
 }
 
 .disconnected {
@@ -42,20 +42,47 @@ body {
     color: white;
     padding: 10px;
     border: none;
-    cursor: pointer;
 }
 
 .bottom-container {
-    position: absolute;
-    bottom: 20px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
     width: 100%;
+    max-height: 128px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
     text-align: center;
+    padding: 10px 20px 20px 10px;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .fixed-bottom {
+    max-height: 100px;
+    overflow-y: auto;
+    width: 100%;
+    padding: 0 10px;
+    box-sizing: border-box;
+    font-size: 18px;
     background: rgba(0, 0, 0, 0.5);
-    padding: 15px;
     border-radius: 10px;
+}
+
+.fixed-bottom::-webkit-scrollbar {
+    width: 6px;
+}
+
+.fixed-bottom::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+.fixed-bottom::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .canvas-container {
