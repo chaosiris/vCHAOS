@@ -4,59 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>vCHAOS</title>
+
+    <!-- Live2D & PixiJS Libraries -->
     <script src="/static/js/live2dcubismcore.min.js"></script>
     <script src="/static/js/live2d.min.js"></script>
     <script src="/static/js/pixi.min.js"></script>
     <script src="/static/js/index.min.js"></script>
+
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <h1>Latest Response from Piper TTS</h1>
-    
-    <p id="responseText">Waiting for response...</p>
-    <p><strong>Generated Text:</strong> <span id="textOutput">Waiting for text...</span></p>
+    <div class="top-left-container">
+        <button id="wsStatus" class="disconnected">Disconnected</button>
+    </div>
 
-    <audio id="audioPlayer" controls autoplay>
-        <source id="audioSource" src="" type="audio/wav">
-        Your browser does not support the audio element.
-    </audio>
+    <div class="top-right-container">
+        <audio id="audioPlayer" controls autoplay>
+            <source id="audioSource" src="" type="audio/wav">
+            Your browser does not support the audio element.
+        </audio>
+    </div>
 
-    <script>
-        // Running on port 11405
-        var socket = new WebSocket("ws://" + window.location.hostname + ":11405/ws");
+    <div class="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
 
-        socket.onmessage = function (event) {
-            var data = JSON.parse(event.data);
+    <div class="bottom-container">
+        <div class="fixed-bottom">
+            <p><strong>Generated Text:</strong> <span id="textOutput">Waiting for text...</span></p>
+        </div>
+    </div>
 
-            if (data.type === "new_audio") {
-                var audioPlayer = document.getElementById("audioPlayer");
-                var audioSource = document.getElementById("audioSource");
-                var textOutput = document.getElementById("textOutput");
-
-                var audioFilePath = window.location.origin + data.audio_file;
-                audioSource.src = audioFilePath;
-                document.getElementById("responseText").innerText = "Playing: " + data.audio_file;
-
-                audioPlayer.load();
-                audioPlayer.play().catch(error => console.error("Playback error:", error));
-
-                var textFilePath = audioFilePath.replace(".wav", ".txt"); // .txt and .wav file have same random seed numbering
-                
-                fetch(textFilePath)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error("Text file not found");
-                        }
-                        return response.text();
-                    })
-                    .then(text => {
-                        textOutput.innerText = text;
-                    })
-                    .catch(error => {
-                        console.error("Failed to load text file:", error);
-                        textOutput.innerText = "No text available.";
-                    });
-            }
-        };
-    </script>
+    <script src="/static/js/init.js"></script>
 </body>
 </html>

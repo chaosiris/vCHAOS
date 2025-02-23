@@ -1,0 +1,74 @@
+body {
+    font-family: Arial, sans-serif;
+    color: white;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+
+    /* Image sourced from Freepik */
+    /* URL: https://www.freepik.com/free-ai-image/anime-style-cozy-home-interior-with-furnishings_133783512.htm */
+    /* License: Free (Attribution Required) */
+    background-image: url("/static/img/background.jpg");
+    background-size: cover;
+    background-position: center center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
+.top-left-container {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1
+}
+
+.top-right-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1
+}
+
+.connected {
+    background-color: green;
+    color: white;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+}
+
+.disconnected {
+    background-color: red;
+    color: white;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+}
+
+.bottom-container {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    text-align: center;
+}
+
+.fixed-bottom {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.canvas-container {
+    position: fixed; 
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: auto;
+}
+
+canvas {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+}
