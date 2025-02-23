@@ -2,7 +2,20 @@ var app, model2;
 var socket;
 var modelLoaded = false;
 
-// Load Live2D model
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let audioSourceNode = null;
+let analyser = null;
+let dataArray = null;
+let audioPlayer = document.getElementById("audioPlayer");
+
+// Ensure audio playing is enabled upon user interaction due to browser restrictions
+document.addEventListener("click", function () {
+    if (audioContext.state === "suspended") {
+        audioContext.resume();
+        console.log("AudioContext resumed.");
+    }
+});
+
 const live2dModule = (function() {
     const live2d = PIXI.live2d;
 
@@ -15,6 +28,15 @@ const live2dModule = (function() {
             transparent: true,
             backgroundAlpha: 0,
         });
+    
+        function loopMotion() {
+            if (model2) {
+                model2.motion("", 0);
+                setTimeout(loopMotion, 2000);
+            }
+        }
+    
+        setTimeout(loopMotion, 1000);
     }
 
     async function loadModel(modelInfo) {
@@ -137,13 +159,104 @@ function connectWebSocket() {
                     console.error("Failed to load text file:", error);
                     textOutput.innerText = "No text available.";
                 });
+
+            playAudioLipSync(audioFilePath);
         }
     };
 }
+
+function playAudioLipSync(audioUrl) {
+    if (!model2) {
+        console.error("Live2D model not loaded. Cannot play animation.");
+        return;
+    }
+
+    let audioSource = document.getElementById("audioSource");
+
+    if (!audioPlayer || !audioSource) {
+        console.error("Audio elements missing.");
+        return;
+    }
+
+    if (audioPlayer.src !== audioUrl) {
+        audioSource.src = audioUrl;
+        audioPlayer.load();
+    }
+
+    if (audioPlayer.paused) {
+        audioPlayer.play().catch(error => console.error("Audio playback error:", error));
+    }
+
+    if (!audioSourceNode) {
+        audioSourceNode = audioContext.createMediaElementSource(audioPlayer);
+        analyser = audioContext.createAnalyser();
+
+        audioSourceNode.connect(analyser);
+        analyser.connect(audioContext.destination);
+        analyser.fftSize = 512;
+
+        const bufferLength = analyser.frequencyBinCount;
+        dataArray = new Uint8Array(bufferLength);
+    }
+
+    function animateMouth() {
+        if (!analyser) return;
+
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+        }
+        let average = sum / dataArray.length;
+        let mouthMovement = Math.min(1, average / 32);
+
+        if (typeof model2.internalModel.coreModel.setParameterValueById === "function") {
+            model2.internalModel.coreModel.setParameterValueById("ParamMouthOpenY", mouthMovement);
+        } else {
+            model2.internalModel.coreModel.setParamFloat("PARAM_MOUTH_OPEN_Y", mouthMovement);
+        }
+
+        if (!audioPlayer.paused) {
+            requestAnimationFrame(animateMouth);
+        } else {
+            if (typeof model2.internalModel.coreModel.setParameterValueById === "function") {
+                model2.internalModel.coreModel.setParameterValueById("ParamMouthOpenY", 0);
+            } else {
+                model2.internalModel.coreModel.setParamFloat("PARAM_MOUTH_OPEN_Y", 0);
+            }
+        }
+    }
+
+    requestAnimationFrame(animateMouth);
+}
+
+audioPlayer.addEventListener("play", function () {
+    playAudioLipSync(audioPlayer.src);
+});
+
+audioPlayer.addEventListener("seeked", function () {
+    playAudioLipSync(audioPlayer.src);
+});
+
+document.addEventListener("touchstart", function () {
+    if (audioContext.state === "suspended") {
+        audioContext.resume().then(() => {
+            console.log("AudioContext resumed on mobile.");
+        });
+    }
+}, { passive: true });
 
 function initializeApp() {
     live2dModule.init();
     connectWebSocket();
 }
+
+document.addEventListener("click", () => {
+    audioContext.resume().then(() => {
+        console.log("AudioContext resumed successfully.");
+    }).catch(error => {
+        console.error("Error resuming AudioContext:", error);
+    });
+});
 
 initializeApp();
