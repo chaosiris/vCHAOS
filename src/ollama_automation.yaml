@@ -1,0 +1,26 @@
+alias: Ollama Webhook
+description: Process input text via Ollama and route response to Piper TTS
+triggers:
+  - webhook_id: ollama_chat
+    allowed_methods:
+      - POST
+      - PUT
+    local_only: true # Ensure webhook access only to devices on local network
+    trigger: webhook
+conditions: []
+actions:
+  - data:
+      agent_id: conversation.llama3_1_8b # Specify Ollama model to use (view name by running ollama list in terminal)
+      text: "{{ trigger.json.text }}"
+    response_variable: ollama_response
+    action: conversation.process
+  - target:
+      entity_id: tts.piper
+    data:
+      message: "{{ ollama_response.response.speech.plain.speech }}"
+      media_player_entity_id: media_player.vlc_telnet # IMPORTANT - user has to have a valid AND reachable media player entity (add entity option to settings.yaml/find workaround)
+      cache: false
+      options:
+        voice: en_US-amy-medium # Specify Piper voice model to use from data folder (without .onnx file extension)
+    action: tts.speak
+mode: queued

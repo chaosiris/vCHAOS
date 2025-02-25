@@ -1,5 +1,6 @@
-import json
 import os
+import json
+import yaml
 import asyncio
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -7,13 +8,34 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import logging
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Load configuration from config.yaml
+def load_settings(file_path="settings.yaml"):
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        print("Error: settings.yaml not found, using defaults.")
+        return {} 
+
+# Load constants from settings.yaml
+settings = load_settings()
+HOST = settings.get("app", {}).get("host", "0.0.0.0")
+PORT = settings.get("app", {}).get("port", 11405)
+LOG_LEVEL = settings.get("logging", {}).get("level", "ERROR")
 
 # Using FastAPI/WebSockets + Uvicorn for real-time communication
 app = FastAPI()
 connected_clients = set()
-notification_file = "./output/new_audio.json"
+notification_file = "output/new_audio.json"
+
+# Serve static files
+app.mount("/static", StaticFiles(directory="static", html=True), name="static")
+app.mount("/live2d_models", StaticFiles(directory="live2d_models"), name="live2d_models")
+app.mount("/output", StaticFiles(directory="output"), name="output")
+
+# Initialize logging framework
+logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 @app.get("/")
 async def serve_root():
@@ -28,12 +50,15 @@ async def websocket_endpoint(websocket: WebSocket):
 
     try:
         while True:
-            message = await asyncio.wait_for(websocket.receive_text(), timeout=30)
-            logger.info(f"Received WebSocket message from {client_ip}: {message}")
-    except asyncio.TimeoutError:
-        logger.warning(f"Client {client_ip} timed out (no activity)")
+            try:
+                message = await asyncio.wait_for(websocket.receive_text(), timeout=30)
+                logger.info(f"Received WebSocket message from {client_ip}: {message}")
+            except asyncio.TimeoutError:
+                await websocket.send_text("ping")  # Keep-alive ping to prevent timeout
     except WebSocketDisconnect:
         logger.info(f"Client {client_ip} disconnected")
+    except asyncio.CancelledError:
+        logger.warning(f"WebSocket connection for {client_ip} was cancelled")
     except Exception as e:
         logger.error(f"Unexpected WebSocket error for {client_ip}: {e}")
     finally:
@@ -74,10 +99,5 @@ async def send_to_clients(message: str):
 async def startup_event():
     asyncio.create_task(monitor_notifications())
 
-# Serve static files
-app.mount("/static", StaticFiles(directory="static", html=True), name="static")
-app.mount("/live2d_models", StaticFiles(directory="live2d_models"), name="live2d_models")
-app.mount("/output", StaticFiles(directory="output"), name="output")
-
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=11405, log_level="info")
+    uvicorn.run(app, host=HOST, port=PORT, log_level=LOG_LEVEL.lower())
