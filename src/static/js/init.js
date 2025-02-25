@@ -12,7 +12,6 @@ let audioPlayer = document.getElementById("audioPlayer");
 document.addEventListener("click", function () {
     if (audioContext.state === "suspended") {
         audioContext.resume();
-        console.log("AudioContext resumed.");
     }
 });
 
@@ -28,15 +27,6 @@ const live2dModule = (function() {
             transparent: true,
             backgroundAlpha: 0,
         });
-    
-        function loopMotion() {
-            if (model2) {
-                model2.motion("", 0);
-                setTimeout(loopMotion, 2000);
-            }
-        }
-    
-        setTimeout(loopMotion, 1000);
     }
 
     async function loadModel(modelInfo) {
@@ -58,6 +48,15 @@ const live2dModule = (function() {
 
             modelLoaded = true;
             console.log("Live2D model loaded successfully!");
+
+            function loopMotion() {
+                if (model2) {
+                    model2.motion("", 0);
+                    setTimeout(loopMotion, 2000);
+                }
+            }
+        
+            setTimeout(loopMotion, 1000);
         } catch (error) {
             console.error("Error loading Live2D model:", error);
         }
@@ -99,8 +98,8 @@ function connectWebSocket() {
 
         if (!modelLoaded) {
             live2dModule.loadModel({
-                url: "/live2d_models/test/test.model3.json",
-                kScale: 0.3
+                url: "/live2d_models/edu_3/edu_3.model3.json",
+                kScale: 0.2
             });
         }
     };
@@ -118,31 +117,34 @@ function connectWebSocket() {
     };
 
     socket.onmessage = function (event) {
-        console.log("WebSocket message received:", event.data);
+        // Ignore keep-alive pings
+        if (event.data === "ping") {
+            return;
+        }
 
-        var data;
+        let data;
         try {
-            data = JSON.parse(event.data);
+            if (event.data.startsWith("{") || event.data.startsWith("[")) {
+                data = JSON.parse(event.data);
+            } else {
+                throw new Error("Received non-JSON message: " + event.data);
+            }
         } catch (error) {
             console.error("Error parsing WebSocket message:", error);
             return;
         }
 
         if (data.type === "new_audio") {
-            console.log("New audio received:", data.audio_file);
-
             var textOutput = document.getElementById("textOutput");
 
             if (!textOutput) {
                 console.error("Missing text output element.");
+                updateStatus("error")
                 return;
             }
 
             var audioFilePath = window.location.origin + data.audio_file;
-            console.log("Fetching audio file:", audioFilePath);
-
             var textFilePath = audioFilePath.replace(".wav", ".txt");
-            console.log("Fetching text from:", textFilePath);
 
             fetch(textFilePath)
                 .then(response => {
@@ -153,13 +155,13 @@ function connectWebSocket() {
                 })
                 .then(text => {
                     textOutput.innerText = text;
-                    console.log("Updated text output:", text);
                 })
                 .catch(error => {
                     console.error("Failed to load text file:", error);
                     textOutput.innerText = "No text available.";
                 });
 
+            updateStatus("received");
             playAudioLipSync(audioFilePath);
         }
     };

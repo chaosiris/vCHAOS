@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
     <title>vCHAOS</title>
 
     <!-- Live2D & PixiJS Libraries -->
@@ -12,12 +13,14 @@
     <script src="/static/js/index.min.js"></script>
 
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="/static/img/icon.png" type="image/png" sizes="192x192">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/img/apple-touch-icon.png">
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="/static/manifest.json">
 </head>
 <body>
     <div class="top-left-container">
         <button id="wsStatus" class="disconnected">Disconnected</button>
+        <button id="responseStatus" class="status-idle">Idle</button>
     </div>
 
     <div class="top-right-container">
@@ -31,12 +34,18 @@
         <canvas id="canvas"></canvas>
     </div>
 
-    <div class="bottom-container">
-        <div class="fixed-bottom">
-            <p><strong>Latest Message:</strong> <span id="textOutput">Waiting for text...</span></p>
+    <div class="bottom-wrapper">
+        <button id="textButton" class="text-icon">✏️</button>
+        <div class="bottom-container">
+            <div class="fixed-bottom" id="fixedBottom">
+                <p id="textDisplay"><strong>Latest Message:</strong> <span id="textOutput">Waiting for text...</span></p>
+                <input type="text" id="userInput" class="hidden" placeholder="Type your prompt..." />
+                <button id="sendButton" class="hidden">Send</button>
+            </div>
         </div>
-    </div>
+    </div>    
 
     <script src="/static/js/init.js"></script>
+    <script src="/static/js/textInput.js"></script>
 </body>
 </html>
