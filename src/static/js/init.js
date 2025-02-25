@@ -1,12 +1,27 @@
 var app, model2;
 var socket;
 var modelLoaded = false;
+window.appSettings = {};
 
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let audioSourceNode = null;
 let analyser = null;
 let dataArray = null;
 let audioPlayer = document.getElementById("audioPlayer");
+
+async function fetchSettings() {
+    try {
+        const response = await fetch("/api/settings");
+        if (!response.ok) throw new Error("Failed to load settings");
+        
+        const settings = await response.json();
+        window.appSettings = settings;
+        console.log("Settings loaded:", window.appSettings);
+    } catch (error) {
+        console.error("Error fetching settings:", error);
+        window.appSettings = {};
+    }
+}
 
 // Ensure audio playing is enabled upon user interaction due to browser restrictions
 document.addEventListener("click", function () {
@@ -90,7 +105,7 @@ function connectWebSocket() {
         if (!modelLoaded) {
             live2dModule.loadModel({
                 url: "/live2d_models/test/test.model3.json",
-                kScale: 0.3
+                kScale: 0.4
             });
         }
     };
@@ -108,7 +123,7 @@ function connectWebSocket() {
     };
 
     socket.onmessage = function (event) {
-        // Ignore keep-alive pings
+
         if (event.data === "ping") {
             return;
         }
@@ -145,6 +160,11 @@ function connectWebSocket() {
                     return response.text();
                 })
                 .then(text => {
+                    if (window.appSettings["chat-interface"]?.["show-sent-prompts"]) {
+                        const textPrefix = document.getElementById("textDisplay").querySelector("strong");
+                        textPrefix.textContent = "Latest Response:";
+                        textPrefix.style.removeProperty("color");
+                    }
                     textOutput.innerText = text;
                 })
                 .catch(error => {
@@ -240,6 +260,7 @@ document.addEventListener("touchstart", function () {
 }, { passive: true });
 
 function initializeApp() {
+    fetchSettings();
     live2dModule.init();
     connectWebSocket();
 }

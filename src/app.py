@@ -3,10 +3,11 @@ import json
 import yaml
 import asyncio
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+import httpx
 import logging
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 
 # Load configuration from config.yaml
 def load_settings(file_path="settings.yaml"):
@@ -40,6 +41,33 @@ logger = logging.getLogger(__name__)
 @app.get("/")
 async def serve_root():
     return FileResponse("static/index.html")
+
+@app.get("/api/settings")
+async def get_settings():
+    return JSONResponse(settings)
+
+@app.post("/api/send_prompt")
+async def send_prompt(request: Request):
+    try:
+        data = await request.json()
+        user_input = data.get("text", "").strip()
+
+        if not user_input:
+            return {"success": False, "error": "No input text provided"}
+
+        # Use Ollama Webhook URL from settings.yaml, otherwise use default URL
+        webhook_url = settings.get("urls", {}).get("ollama_webhook", "http://homeassistant.local:8123/api/webhook/ollama_chat")
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(webhook_url, json={"text": user_input}, headers={"Content-Type": "application/json"}, timeout=20)
+            response.raise_for_status()
+
+        return {"success": True, "message": "Sent successfully", "input": user_input}
+
+    except httpx.RequestError as e:
+        return {"success": False, "error": f"HTTP Request error: {str(e)}"}
+    except Exception as e:
+        return {"success": False, "error": f"Application error: {str(e)}"}
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

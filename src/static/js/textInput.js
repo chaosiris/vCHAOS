@@ -47,113 +47,38 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     async function sendToBackend(inputText) {
-        const webhookUrl = "http://homeassistant.local:8123/api/webhook/ollama_chat";
 
+        if (window.appSettings["chat-interface"]?.["show-sent-prompts"]) {
+            let textPrefix = document.getElementById("textDisplay").querySelector("strong");
+            textPrefix.textContent = "Sent Prompt:";
+            textPrefix.style.color = "lightgreen";
+            document.getElementById("textOutput").textContent = inputText;
+        }
+    
         try {
-            const response = await fetch(webhookUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: inputText }),
-            });
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            updateStatus("waiting");
-
-        } catch (error) {
-            console.error("Error while sending request:", error);
-            updateStatus("error");
-        }
-    }
-
-    function updateStatus(state) {
-        if (state === "waiting") {
-            responseStatus.textContent = "Waiting for Response";
-            responseStatus.className = "status-waiting";
-        } else if (state === "received") {
-            responseStatus.textContent = "Response Received";
-            responseStatus.className = "status-received";
-        } else if (state === "error") {
-            responseStatus.textContent = "Error";
-            responseStatus.className = "status-error";
-        } else {
-            responseStatus.textContent = "Idle";
-            responseStatus.className = "status-idle";
-        }
-    }
-
-    window.updateStatus = updateStatus;
-});
-
-
-document.addEventListener("DOMContentLoaded", function () {
-    const textButton = document.getElementById("textButton");
-    const fixedBottom = document.getElementById("fixedBottom");
-    const textDisplay = document.getElementById("textDisplay");
-
-
-    const userInput = document.createElement("input");
-    userInput.setAttribute("type", "text");
-    userInput.setAttribute("id", "userInput");
-    userInput.setAttribute("placeholder", "Type your prompt...");
-    userInput.classList.add("user-input-field");
-
-    const sendButton = document.createElement("button");
-    sendButton.setAttribute("id", "sendButton");
-    sendButton.textContent = "Send";
-
-
-    let textMode = false;
-
-    textButton.addEventListener("click", function () {
-        textMode = !textMode;
-
-        if (textMode) {
-            textDisplay.classList.add("hidden");
-            inputContainer.classList.remove("hidden");
-            userInput.focus();
-        } else {
-            textDisplay.classList.remove("hidden");
-            inputContainer.classList.add("hidden");
-        }
-    });
-
-    sendButton.addEventListener("click", function () {
-        const inputText = userInput.value.trim();
-        if (inputText) {
-            sendToBackend(inputText);
-            userInput.value = "";
-            inputContainer.classList.add("hidden");
-            textDisplay.classList.remove("hidden");
-            textMode = false;
-        }
-    });
-
-    userInput.addEventListener("keypress", function (event) {
-        if (event.key === "Enter") {
-            sendButton.click();
-        }
-    });
-
-    async function sendToBackend(inputText) {
-        // TODO: Add this URL to settings.yaml
-        const webhookUrl = "http://homeassistant.local:8123/api/webhook/ollama_chat";
-
-        try {
-            const response = await fetch(webhookUrl, {
+            const response = await fetch("/api/send_prompt", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ text: inputText }),
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
             updateStatus("waiting");
+            const result = await response.json();
 
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || `HTTP error! Status: ${response.status}`);
+            }
+    
         } catch (error) {
             console.error("Error while sending request:", error);
+    
+            if (window.appSettings["chat-interface"]?.["show-sent-prompts"]) {
+                let textPrefix = document.getElementById("textDisplay").querySelector("strong");
+                textPrefix.textContent = "Error Sending Prompt:";
+                textPrefix.style.color = "lightcoral";
+                document.getElementById("textOutput").textContent = inputText;
+            }
+    
             updateStatus("error");
         }
     }
