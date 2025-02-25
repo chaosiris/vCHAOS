@@ -48,15 +48,6 @@ const live2dModule = (function() {
 
             modelLoaded = true;
             console.log("Live2D model loaded successfully!");
-
-            function loopMotion() {
-                if (model2) {
-                    model2.motion("", 0);
-                    setTimeout(loopMotion, 2000);
-                }
-            }
-        
-            setTimeout(loopMotion, 1000);
         } catch (error) {
             console.error("Error loading Live2D model:", error);
         }
@@ -98,8 +89,8 @@ function connectWebSocket() {
 
         if (!modelLoaded) {
             live2dModule.loadModel({
-                url: "/live2d_models/edu_3/edu_3.model3.json",
-                kScale: 0.2
+                url: "/live2d_models/test/test.model3.json",
+                kScale: 0.3
             });
         }
     };
