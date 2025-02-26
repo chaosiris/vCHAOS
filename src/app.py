@@ -46,6 +46,26 @@ async def serve_root():
 async def get_settings():
     return JSONResponse(settings)
 
+@app.get("/api/get_history")
+async def get_chat_history():
+    try:
+        files = os.listdir("output")
+        history = []
+
+        for file in files:
+            if file.endswith(".txt"):
+                wav_file = file.replace(".txt", ".wav")
+                if wav_file in files:
+                    history.append({
+                        "txt": f"/output/{file}",
+                        "wav": f"/output/{wav_file}"
+                    })
+
+        return JSONResponse(history)
+
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
 @app.post("/api/send_prompt")
 async def send_prompt(request: Request):
     try:
@@ -79,7 +99,7 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             try:
-                message = await asyncio.wait_for(websocket.receive_text(), timeout=30)
+                message = await asyncio.wait_for(websocket.receive_text(), timeout=60)
                 logger.info(f"Received WebSocket message from {client_ip}: {message}")
             except asyncio.TimeoutError:
                 await websocket.send_text("ping")  # Keep-alive ping to prevent timeout

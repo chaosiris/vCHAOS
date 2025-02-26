@@ -1,3 +1,10 @@
+html, body {
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+}
+
 body {
     font-family: Arial, sans-serif;
     color: white;
@@ -31,19 +38,24 @@ body {
     z-index: 1;
 }
 
-.connected {
-    background-color: green;
+.connected, .disconnected, #responseStatus {
     color: white;
     padding: 10px;
     border: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    touch-action: manipulation;
+}
+
+.connected {
+    background-color: green;
     font-weight: bold;
 }
 
 .disconnected {
     background-color: red;
-    color: white;
-    padding: 10px;
-    border: none;
     font-weight: bold;
 }
 
@@ -52,7 +64,9 @@ body {
     padding: 10px;
     border: none;
     margin-left: 10px;
-    cursor: default;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .status-idle {
@@ -71,6 +85,10 @@ body {
     background-color: darkred;
 }
 
+.status-timeout {
+    background-color: black;
+}
+
 .bottom-wrapper {
     position: fixed;
     bottom: 0;
@@ -81,6 +99,18 @@ body {
     position: absolute;
     bottom: calc(100% + 5px);
     right: 15px;
+    background: none;
+    color: white;
+    font-size: 18px;
+    border: none;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.history-icon {
+    position: absolute;
+    bottom: calc(100% + 5px);
+    left: 15px;
     background: none;
     color: white;
     font-size: 18px;
@@ -115,18 +145,24 @@ body {
     font-size: 18px;
     background: rgba(0, 0, 0, 0.5);
     border-radius: 10px;
+    white-space: normal; /* Allow multi-line text */
+    word-break: break-word; /* Force long strings to break */
 }
 
 .fixed-bottom::-webkit-scrollbar {
     width: 6px;
 }
 
-.fixed-bottom::-webkit-scrollbar-thumb {
+#historyList::-webkit-scrollbar {
+    width: 10px;
+}
+
+.fixed-bottom::-webkit-scrollbar-thumb, #historyList::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 10px;
 }
 
-.fixed-bottom::-webkit-scrollbar-track {
+.fixed-bottom::-webkit-scrollbar-track, #historyList::-webkit-scrollbar-track {
     background: transparent;
 }
 
@@ -175,6 +211,74 @@ canvas {
     height: 100%;
 }
 
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: calc(10px + 50px);
+    width: 320px;
+    bottom: 188px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    z-index: 1000;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.sidebar h3 {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.sidebar button {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    padding: 8px;
+    width: 100%;
+    margin-top: 5px;
+    cursor: pointer;
+    white-space: normal; /* Allow multi-line text */
+    word-break: break-word; /* Force long strings to break */
+}
+
+.sidebar button:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.sidebar.show {
+    transform: translateX(0);
+}
+
+#historyList {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0px 10px 0px 16px;
+    margin-bottom: 10px;
+}
+
+#closeSidebar {
+    position: absolute;
+    top: calc(10px + 50px);
+    left: calc(320px - 36px);
+    background: none;
+    color: white !important;
+    font-size: 22px;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    z-index: 1100;
+    transition: color 0.2s ease-in-out;
+}
+
+#closeSidebar:hover {
+    color: red !important; 
+}
+
 @media (max-width: 768px) {
     .top-left-container {
         flex-direction: column;
@@ -184,5 +288,29 @@ canvas {
     #responseStatus {
         margin-top: 10px;
         margin-left: 0px;
+    }
+
+    .sidebar {
+        top: calc(10px + 100px);
+        width: 256px;
+    }
+
+    #historyList {
+        padding-right: 16px;
+    }
+
+    #closeSidebar {
+        top: calc(10px + 100px);
+        left: calc(256px - 50px);
+    }
+}
+
+@media (max-height: 500px) {
+    .sidebar {
+        height: calc(100vh - (10px + 50px) - 80px);
+    }
+
+    #historyList {
+        max-height: calc(100vh - (10px + 50px) - 100px);
     }
 }

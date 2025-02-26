@@ -42,6 +42,8 @@ const live2dModule = (function() {
             transparent: true,
             backgroundAlpha: 0,
         });
+
+
     }
 
     async function loadModel(modelInfo) {
@@ -66,6 +68,7 @@ const live2dModule = (function() {
         } catch (error) {
             console.error("Error loading Live2D model:", error);
         }
+
     }
 
     function draggable(model) {
@@ -160,6 +163,7 @@ function connectWebSocket() {
                     return response.text();
                 })
                 .then(text => {
+                    document.getElementById("textDisplay").scrollTop = 0;
                     if (window.appSettings["chat-interface"]?.["show-sent-prompts"]) {
                         const textPrefix = document.getElementById("textDisplay").querySelector("strong");
                         textPrefix.textContent = "Latest Response:";
@@ -251,13 +255,24 @@ audioPlayer.addEventListener("seeked", function () {
     playAudioLipSync(audioPlayer.src);
 });
 
-document.addEventListener("touchstart", function () {
-    if (audioContext.state === "suspended") {
-        audioContext.resume().then(() => {
-            console.log("AudioContext resumed on mobile.");
-        });
+// Fix orientation/zoom-in issues on mobile
+document.addEventListener('gesturestart', function (event) {
+    event.preventDefault();
+});
+let lastTouchEnd = 0;
+document.addEventListener('touchend', function (event) {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
     }
-}, { passive: true });
+    lastTouchEnd = now;
+}, false);
+window.addEventListener("orientationchange", function () {
+    document.documentElement.style.zoom = "reset";
+    setTimeout(() => {
+        document.documentElement.style.zoom = "100%";
+    }, 200);
+});
 
 function initializeApp() {
     fetchSettings();

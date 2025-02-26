@@ -54,6 +54,11 @@ document.addEventListener("DOMContentLoaded", function () {
             textPrefix.style.color = "lightgreen";
             document.getElementById("textOutput").textContent = inputText;
         }
+
+        let responseTimeout = setTimeout(() => {
+            console.error("Request timed out after 180 seconds.");
+            updateStatus("timeout");
+        }, 180000); // TODO: Make this a user configurable setting (some users might run pipeline on slower hardware)
     
         try {
             const response = await fetch("/api/send_prompt", {
@@ -64,6 +69,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             updateStatus("waiting");
             const result = await response.json();
+            clearTimeout(responseTimeout);
 
             if (!response.ok || !result.success) {
                 throw new Error(result.error || `HTTP error! Status: ${response.status}`);
@@ -75,7 +81,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (window.appSettings["chat-interface"]?.["show-sent-prompts"]) {
                 let textPrefix = document.getElementById("textDisplay").querySelector("strong");
                 textPrefix.textContent = "Error Sending Prompt:";
-                textPrefix.style.color = "lightcoral";
+                textPrefix.style.color = "red";
                 document.getElementById("textOutput").textContent = inputText;
             }
     
@@ -93,6 +99,9 @@ document.addEventListener("DOMContentLoaded", function () {
         } else if (state === "error") {
             responseStatus.textContent = "Error";
             responseStatus.className = "status-error";
+        } else if (state === "timeout") {
+            responseStatus.textContent = "Timed Out";
+            responseStatus.className = "status-timeout";
         } else {
             responseStatus.textContent = "Idle";
             responseStatus.className = "status-idle";

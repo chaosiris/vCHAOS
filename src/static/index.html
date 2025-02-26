@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <meta name="color-scheme" content="dark">
     <title>vCHAOS</title>
 
@@ -34,7 +34,14 @@
         <canvas id="canvas"></canvas>
     </div>
 
+    <button id="closeSidebar" class="hidden">✖</button>
+    <div class="sidebar hidden" id="historySidebar">
+        <h3>Chat History</h3>
+        <div id="historyList"></div>
+    </div>    
+
     <div class="bottom-wrapper">
+        <button id="historyButton" class="history-icon">📜</button>
         <button id="textButton" class="text-icon">✏️</button>
         <div class="bottom-container">
             <div class="fixed-bottom" id="fixedBottom">
@@ -47,5 +54,6 @@
 
     <script src="/static/js/init.js"></script>
     <script src="/static/js/textInput.js"></script>
+    <script src="/static/js/chatHistory.js"></script>
 </body>
 </html>
