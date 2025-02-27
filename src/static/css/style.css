@@ -42,7 +42,9 @@ body {
     color: white;
     padding: 10px;
     border: none;
+    border-radius: 5px;
     user-select: none;
+    pointer-events: none;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
@@ -60,13 +62,7 @@ body {
 }
 
 #responseStatus {
-    color: white;
-    padding: 10px;
-    border: none;
     margin-left: 10px;
-    pointer-events: none;
-    user-select: none;
-    -webkit-user-select: none;
 }
 
 .status-idle {
@@ -254,6 +250,51 @@ canvas {
     transform: translateX(0);
 }
 
+.search-container {
+    position: relative;
+    width: calc(100% - 26px);
+    padding: 5px;
+    box-sizing: border-box;
+    margin: 0 auto;
+}
+
+
+#searchInput {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    outline: none;
+    box-sizing: border-box;
+}
+
+#searchInput::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+#searchButton {
+    position: absolute;
+    top: 50%;
+    margin-top: 0px;
+    right: 10px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 5px;
+    width: auto;
+    height: auto;
+}
+
+#searchButton:hover {
+    color: lightgray;
+}
+
 #historyList {
     flex-grow: 1;
     overflow-y: auto;
@@ -266,7 +307,7 @@ canvas {
     top: calc(10px + 50px);
     left: calc(320px - 36px);
     background: none;
-    color: white !important;
+    color: white;
     font-size: 22px;
     font-weight: bold;
     border: none;
@@ -276,7 +317,7 @@ canvas {
 }
 
 #closeSidebar:hover {
-    color: red !important; 
+    color: red; 
 }
 
 @media (max-width: 768px) {

@@ -6,7 +6,7 @@ import asyncio
 import uvicorn
 import httpx
 import logging
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 
@@ -49,7 +49,7 @@ async def get_settings():
     return JSONResponse(settings)
 
 @app.get("/api/get_history")
-async def get_chat_history():
+async def get_chat_history(search: str = Query(default=None, description="Search query for filtering history")):
     try:
         files = os.listdir("output")
         history = []
@@ -64,17 +64,30 @@ async def get_chat_history():
                     # Load preview text from .txt file (first 50 chars)
                     try:
                         with open(f"output/{file}", "r", encoding="utf-8") as f:
-                            full_text = f.read().strip()
-                            preview_text = full_text[:50] + "..." if len(full_text) > 50 else full_text
-                    except Exception as e:
+                            preview_text = f.read(50).strip() 
+                            if len(preview_text) == 50:
+                                preview_text += "..."
+                    except Exception:
                         preview_text = "Error loading text."
 
-                    history.append({
+                    history_entry = {
                         "txt": f"/output/{file}",
                         "wav": f"/output/{wav_file}",
                         "timestamp": timestamp,
-                        "preview_text": preview_text
-                    })
+                        "preview_text": preview_text,
+                    }
+
+                    if search:
+                        try:
+                            with open(f"output/{file}", "r", encoding="utf-8") as f:
+                                full_text = f.read().strip()
+                        except Exception:
+                            full_text = ""
+
+                        if search.lower() not in full_text.lower():
+                            continue  
+
+                    history.append(history_entry)
 
         # Sort by timestamp (latest first)
         history.sort(key=lambda item: item["timestamp"], reverse=True)

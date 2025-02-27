@@ -28,11 +28,11 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    async function loadChatHistory() {
+    async function loadChatHistory(searchQuery = "") {
         historyList.innerHTML = "<p>Loading chat history...</p>";
     
         try {
-            const response = await fetch("/api/get_history");
+            const response = await fetch(`/api/get_history?search=${encodeURIComponent(searchQuery)}`);
             if (!response.ok) {
                 throw new Error("Failed to load history.");
             }
@@ -40,24 +40,22 @@ document.addEventListener("DOMContentLoaded", function () {
     
             historyList.innerHTML = "";
     
-            const historyItems = data.map((item) => {
-                const wavFile = item.wav;
-                const txtFile = item.txt;
-                const timestamp = item.timestamp ? new Date(item.timestamp).toLocaleString() : "Unknown Time";
-                const previewText = item.preview_text || "Error loading text.";
+            if (data.length === 0) {
+                historyList.innerHTML = "<p>No matching results.</p>";
+                return;
+            }
     
+            data.forEach((item) => {
                 const historyItem = document.createElement("div");
                 historyItem.classList.add("history-item-container");
                 historyItem.innerHTML = `
-                    <button class="history-item" data-wav="${wavFile}" data-txt="${txtFile}">
-                        📄 <strong>${timestamp}</strong><br>
-                        ${previewText}
+                    <button class="history-item" data-wav="${item.wav}" data-txt="${item.txt}">
+                        📄 <strong>${new Date(item.timestamp).toLocaleString()}</strong><br>
+                        ${item.preview_text}
                     </button>
                 `;
-                return historyItem;
+                historyList.appendChild(historyItem);
             });
-    
-            historyItems.forEach((item) => historyList.appendChild(item));
     
             historyList.addEventListener("click", function (event) {
                 const button = event.target.closest(".history-item");
@@ -73,6 +71,16 @@ document.addEventListener("DOMContentLoaded", function () {
             console.error(error);
         }
     }
+
+    searchButton.addEventListener("click", function () {
+        loadChatHistory(searchInput.value);
+    });
+    
+    searchInput.addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+            loadChatHistory(searchInput.value);
+        }
+    });
     
     async function loadChatFromHistory(wavFile, txtFile) {
         const textOutput = document.getElementById("textOutput");
