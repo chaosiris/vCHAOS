@@ -10,3 +10,4 @@ logging:
 
 chat-interface:
   show-sent-prompts: true    # After sending a text prompt, should it be displayed? // Default: true
+  timeout: 180     # How long should the user wait for a response from the pipeline before timing out (in seconds?) // Default: 180

@@ -47,7 +47,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     async function sendToBackend(inputText) {
-
         if (window.appSettings["chat-interface"]?.["show-sent-prompts"]) {
             let textPrefix = document.getElementById("textDisplay").querySelector("strong");
             textPrefix.textContent = "Sent Prompt:";
@@ -55,22 +54,23 @@ document.addEventListener("DOMContentLoaded", function () {
             document.getElementById("textOutput").textContent = inputText;
         }
 
-        let responseTimeout = setTimeout(() => {
-            console.error("Request timed out after 180 seconds.");
-            updateStatus("timeout");
-        }, 180000); // TODO: Make this a user configurable setting (some users might run pipeline on slower hardware)
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Request timed out after 180 seconds")), window.appSettings["chat-interface"]?.["timeout"] * 1000)
+        );
     
         try {
-            const response = await fetch("/api/send_prompt", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: inputText }),
-            });
-
+            const response = await Promise.race([
+                fetch("/api/send_prompt", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: inputText }),
+                }),
+                timeoutPromise // This will reject if the timeout is reached first
+            ]);
+    
             updateStatus("waiting");
             const result = await response.json();
-            clearTimeout(responseTimeout);
-
+    
             if (!response.ok || !result.success) {
                 throw new Error(result.error || `HTTP error! Status: ${response.status}`);
             }
@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", function () {
     
             updateStatus("error");
         }
-    }
+    }    
 
     function updateStatus(state) {
         if (state === "waiting") {

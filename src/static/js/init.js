@@ -23,13 +23,6 @@ async function fetchSettings() {
     }
 }
 
-// Ensure audio playing is enabled upon user interaction due to browser restrictions
-document.addEventListener("click", function () {
-    if (audioContext.state === "suspended") {
-        audioContext.resume();
-    }
-});
-
 const live2dModule = (function() {
     const live2d = PIXI.live2d;
 
@@ -259,27 +252,33 @@ audioPlayer.addEventListener("seeked", function () {
 document.addEventListener('gesturestart', function (event) {
     event.preventDefault();
 });
+
 let lastTouchEnd = 0;
-document.addEventListener('touchend', function (event) {
+document.addEventListener("touchend", function (event) {
     const now = Date.now();
-    if (now - lastTouchEnd <= 300) {
-        event.preventDefault();
+
+    // If tapping inside the history list, allow double-tap
+    if (event.target.closest("#historyList")) {
+        return;
     }
+
+    if (now - lastTouchEnd <= 300) {
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+    }
+
     lastTouchEnd = now;
-}, false);
+}, { passive: false });
+
 window.addEventListener("orientationchange", function () {
-    document.documentElement.style.zoom = "reset";
+    document.documentElement.style.zoom = "1";
     setTimeout(() => {
-        document.documentElement.style.zoom = "100%";
+        document.documentElement.style.zoom = "1";
     }, 200);
 });
 
-function initializeApp() {
-    fetchSettings();
-    live2dModule.init();
-    connectWebSocket();
-}
-
+// Ensure audio playing is enabled upon user interaction due to browser restrictions
 document.addEventListener("click", () => {
     audioContext.resume().then(() => {
         console.log("AudioContext resumed successfully.");
@@ -287,5 +286,11 @@ document.addEventListener("click", () => {
         console.error("Error resuming AudioContext:", error);
     });
 });
+
+function initializeApp() {
+    fetchSettings();
+    live2dModule.init();
+    connectWebSocket();
+}
 
 initializeApp();

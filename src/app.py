@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import yaml
 import asyncio
@@ -23,6 +24,7 @@ settings = load_settings()
 HOST = settings.get("app", {}).get("host", "0.0.0.0")
 PORT = settings.get("app", {}).get("port", 11405)
 LOG_LEVEL = settings.get("logging", {}).get("level", "ERROR")
+TIMEOUT_DURATION = settings.get("chat-interface", {}).get("timeout", 180)
 
 # Using FastAPI/WebSockets + Uvicorn for real-time communication
 app = FastAPI()
@@ -56,10 +58,26 @@ async def get_chat_history():
             if file.endswith(".txt"):
                 wav_file = file.replace(".txt", ".wav")
                 if wav_file in files:
+                    match = re.search(r"(\d{13})", file)
+                    timestamp = int(match.group(1)) if match else int(os.path.getmtime(f"output/{file}") * 1000)
+
+                    # Load preview text from .txt file (first 50 chars)
+                    try:
+                        with open(f"output/{file}", "r", encoding="utf-8") as f:
+                            full_text = f.read().strip()
+                            preview_text = full_text[:50] + "..." if len(full_text) > 50 else full_text
+                    except Exception as e:
+                        preview_text = "Error loading text."
+
                     history.append({
                         "txt": f"/output/{file}",
-                        "wav": f"/output/{wav_file}"
+                        "wav": f"/output/{wav_file}",
+                        "timestamp": timestamp,
+                        "preview_text": preview_text
                     })
+
+        # Sort by timestamp (latest first)
+        history.sort(key=lambda item: item["timestamp"], reverse=True)
 
         return JSONResponse(history)
 
@@ -75,14 +93,19 @@ async def send_prompt(request: Request):
         if not user_input:
             return {"success": False, "error": "No input text provided"}
 
-        # Use Ollama Webhook URL from settings.yaml, otherwise use default URL
         webhook_url = settings.get("urls", {}).get("ollama_webhook", "http://homeassistant.local:8123/api/webhook/ollama_chat")
 
         async with httpx.AsyncClient() as client:
-            response = await client.post(webhook_url, json={"text": user_input}, headers={"Content-Type": "application/json"}, timeout=20)
-            response.raise_for_status()
+            try:
+                response = await asyncio.wait_for(
+                    client.post(webhook_url, json={"text": user_input}, headers={"Content-Type": "application/json"}),
+                    timeout=TIMEOUT_DURATION
+                )
+                response.raise_for_status()
+                return {"success": True, "message": "Sent successfully", "input": user_input}
 
-        return {"success": True, "message": "Sent successfully", "input": user_input}
+            except asyncio.TimeoutError:
+                return {"success": False, "error": f"Request timed out after {TIMEOUT_DURATION} seconds"}
 
     except httpx.RequestError as e:
         return {"success": False, "error": f"HTTP Request error: {str(e)}"}

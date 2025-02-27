@@ -38,48 +38,24 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             let data = await response.json();
     
-            // Sort timestamps in reverse order for easier access to latest responses
-            data.sort((a, b) => {
-                const matchA = a.wav.match(/(\d{13})/);
-                const matchB = b.wav.match(/(\d{13})/);
-                const timestampA = matchA ? parseInt(matchA[0]) : 0;
-                const timestampB = matchB ? parseInt(matchB[0]) : 0;
-                return timestampB - timestampA;
-            });
-    
             historyList.innerHTML = "";
     
-            const historyItems = await Promise.all(
-                data.map(async (item) => {
-                    const wavFile = item.wav;
-                    const txtFile = item.txt;
+            const historyItems = data.map((item) => {
+                const wavFile = item.wav;
+                const txtFile = item.txt;
+                const timestamp = item.timestamp ? new Date(item.timestamp).toLocaleString() : "Unknown Time";
+                const previewText = item.preview_text || "Error loading text.";
     
-                    let timestamp = "Unknown Time";
-                    const match = wavFile.match(/(\d{13})/);
-                    if (match) {
-                        timestamp = new Date(parseInt(match[0])).toLocaleString();
-                    }
-    
-                    let previewText = "Loading...";
-                    try {
-                        const textResponse = await fetch(txtFile);
-                        const fullText = await textResponse.text();
-                        previewText = fullText.length > 50 ? fullText.substring(0, 50) + "..." : fullText;
-                    } catch {
-                        previewText = "Error loading text.";
-                    }
-    
-                    const historyItem = document.createElement("div");
-                    historyItem.classList.add("history-item-container");
-                    historyItem.innerHTML = `
-                        <button class="history-item" data-wav="${wavFile}" data-txt="${txtFile}">
-                            📄 <strong>${timestamp}</strong><br>
-                            ${previewText}
-                        </button>
-                    `;
-                    return historyItem;
-                })
-            );
+                const historyItem = document.createElement("div");
+                historyItem.classList.add("history-item-container");
+                historyItem.innerHTML = `
+                    <button class="history-item" data-wav="${wavFile}" data-txt="${txtFile}">
+                        📄 <strong>${timestamp}</strong><br>
+                        ${previewText}
+                    </button>
+                `;
+                return historyItem;
+            });
     
             historyItems.forEach((item) => historyList.appendChild(item));
     
@@ -119,7 +95,7 @@ document.addEventListener("DOMContentLoaded", function () {
         audioPlayer.currentTime = 0;
         audioSource.src = "";
 
-        // Load selected chat log (with 1000ms delay)
+        // Load selected chat log (with 100ms delay)
         setTimeout(() => {
             audioSource.src = wavFile;
             audioPlayer.load();
@@ -130,6 +106,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     console.error("Audio playback error:", error);
                 });
             };
-        }, 100);
+        }, 50);
         }
 });
