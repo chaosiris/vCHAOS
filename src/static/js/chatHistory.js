@@ -28,6 +28,23 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
+    document.addEventListener("keydown", function (event) {
+        if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
+            return;
+        }
+    
+        if (event.key === "h") { 
+            event.preventDefault();
+            const isSidebarOpen = historySidebar.classList.contains("show");
+    
+            if (isSidebarOpen) {
+                closeSidebar.click();
+            } else {
+                historyButton.click();
+            }
+        }
+    });
+
     async function loadChatHistory(searchQuery = "") {
         historyList.innerHTML = "<p>Loading chat history...</p>";
     

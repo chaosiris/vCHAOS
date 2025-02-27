@@ -46,6 +46,19 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
+    document.addEventListener("keydown", function (event) {
+        if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
+            return;
+        }
+    
+        switch (event.key) {
+            case "i":
+                event.preventDefault();
+                textButton.click();
+                break;
+        }
+    });
+
     async function sendToBackend(inputText) {
         if (window.appSettings["chat-interface"]?.["show-sent-prompts"]) {
             let textPrefix = document.getElementById("textDisplay").querySelector("strong");
