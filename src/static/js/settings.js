@@ -5,8 +5,11 @@ document.addEventListener("DOMContentLoaded", async function () {
     const cancelSettings = document.getElementById("cancelSettings");
 
     const showSentPrompts = document.getElementById("showSentPrompts");
+    const enableTextRepeat = document.getElementById("enableTextRepeat");
     const timeoutInput = document.getElementById("timeoutInput");
+    const modelInput = document.getElementById("modelInput");
 
+    initModelPath = "";
     window.appSettings = {};
     await loadSettings();
 
@@ -26,7 +29,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     settingsButton.addEventListener("click", async function () {
         showSentPrompts.checked = window.appSettings["show-sent-prompts"];
+        enableTextRepeat.checked = window.appSettings["enable-text-repeat"];
         timeoutInput.value = window.appSettings["timeout"];
+        modelInput.value = window.appSettings["model_path"];
+        initModelPath = modelInput.value;
         settingsModal.classList.remove("hidden");
     });
 
@@ -46,12 +52,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
 
     applySettings.addEventListener("click", async function () {
-        event.preventDefault();
-
         const newSettings = {
             "frontend": {
                 "show-sent-prompts": showSentPrompts.checked,
-                "timeout": parseInt(timeoutInput.value)
+                "enable-text-repeat": enableTextRepeat.checked,
+                "timeout": parseInt(timeoutInput.value),
+                "model_path": modelInput.value
             }
         };
 
@@ -66,7 +72,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             await loadSettings();
             settingsModal.classList.add("hidden");
-            // window.location.reload(); // TODO: Refresh only when model is changed (to be implemented)
+            if (initModelPath !== modelInput.value) {
+                // Refresh page to reload Live2D model if path changed
+                window.location.reload();
+            }
 
         } catch (error) {
             console.error("Error applying settings:", error);

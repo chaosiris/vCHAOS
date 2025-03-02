@@ -5,12 +5,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const textDisplay = document.getElementById("textDisplay");
     const userInput = document.getElementById("userInput");
     const sendButton = document.getElementById("sendButton");
+    const repeatButton = document.getElementById("repeatButton");
     inputContainer.classList.add("input-container", "hidden");
     inputContainer.appendChild(userInput);
     inputContainer.appendChild(sendButton);
     fixedBottom.appendChild(inputContainer);
 
     let textMode = false;
+    let lastInputText = "";
 
     textButton.addEventListener("click", function () {
         textMode = !textMode;
@@ -21,11 +23,22 @@ document.addEventListener("DOMContentLoaded", function () {
             userInput.classList.remove("hidden");
             sendButton.classList.remove("hidden");
             userInput.focus();
+
+            if (window.appSettings["enable-text-repeat"]) {
+                repeatButton.classList.remove("hidden");
+                repeatButton.onclick = function () {
+                    userInput.value = lastInputText;
+                };
+            }
         } else {
             textDisplay.classList.remove("hidden");
             inputContainer.classList.add("hidden");
             userInput.classList.add("hidden");
             sendButton.classList.add("hidden");
+
+            if (window.appSettings["enable-text-repeat"]) {
+                repeatButton.classList.add("hidden");
+            }
         }
     });
 
@@ -36,6 +49,10 @@ document.addEventListener("DOMContentLoaded", function () {
             userInput.value = "";
             inputContainer.classList.add("hidden");
             textDisplay.classList.remove("hidden");
+            if (window.appSettings["enable-text-repeat"]) {
+                lastInputText = inputText;
+                repeatButton.classList.add("hidden");
+            }
             textMode = false;
         }
     });

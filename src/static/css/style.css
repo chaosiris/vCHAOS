@@ -103,6 +103,18 @@ body {
     z-index: 10;
 }
 
+.repeat-icon {
+    position: absolute;
+    bottom: calc(100% + 5px);
+    right: 105px;
+    background: none;
+    color: white;
+    font-size: 18px;
+    border: none;
+    cursor: pointer;
+    z-index: 10;
+}
+
 .history-icon {
     position: absolute;
     bottom: calc(100% + 5px);
@@ -268,7 +280,7 @@ input:checked + .slider:before {
     transform: translateX(20px);
 }
 
-#timeoutInput {
+#timeoutInput, #modelInput {
     flex-grow: 1;
     max-width: 80px;
     padding: 5px;
@@ -279,6 +291,10 @@ input:checked + .slider:before {
     background: rgba(255, 255, 255, 0.2);
     color: white;
     outline: none;
+}
+
+#modelInput {
+    max-width: 200px;
 }
 
 .settings-buttons {

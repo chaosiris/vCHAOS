@@ -184,6 +184,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_text("ping")  # Keep-alive ping to prevent timeout
     except WebSocketDisconnect:
         logger.info(f"Client {client_ip} disconnected")
+    except ConnectionResetError:
+        logger.warning(f"Connection reset by {client_ip}")
     except asyncio.CancelledError:
         logger.warning(f"WebSocket connection for {client_ip} was cancelled")
     except Exception as e:
