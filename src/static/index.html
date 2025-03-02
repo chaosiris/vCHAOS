@@ -45,8 +45,35 @@
         <div id="historyList"></div>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="hidden">
+        <div class="settings-container">
+            <h3>Settings</h3>
+
+            <div class="settings-option">
+                <label for="showSentPrompts">Show Sent Prompts:</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="showSentPrompts">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <div class="settings-option">
+                <label for="timeoutInput">Timeout (seconds):</label>
+                <input type="number" id="timeoutInput" min="30" max="600" step="10">
+            </div>
+
+            <div class="settings-buttons">
+                <button id="applySettings">Apply</button>
+                <button id="cancelSettings">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <div class="bottom-wrapper">
         <button id="historyButton" class="history-icon">📜</button>
+        <button id="settingsButton" class="settings-icon">⚙️</button>
+        <button id="voiceButton" class="voice-icon">🎤</button>
         <button id="textButton" class="text-icon">✏️</button>
         <div class="bottom-container">
             <div class="fixed-bottom" id="fixedBottom">
@@ -60,5 +87,6 @@
     <script src="/static/js/init.js"></script>
     <script src="/static/js/textInput.js"></script>
     <script src="/static/js/chatHistory.js"></script>
+    <script src="/static/js/settings.js"></script>
 </body>
 </html>

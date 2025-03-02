@@ -1,27 +1,12 @@
 var app, model2;
 var socket;
 var modelLoaded = false;
-window.appSettings = {};
 
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let audioSourceNode = null;
 let analyser = null;
 let dataArray = null;
 let audioPlayer = document.getElementById("audioPlayer");
-
-async function fetchSettings() {
-    try {
-        const response = await fetch("/api/settings");
-        if (!response.ok) throw new Error("Failed to load settings");
-        
-        const settings = await response.json();
-        window.appSettings = settings;
-        console.log("Settings loaded:", window.appSettings);
-    } catch (error) {
-        console.error("Error fetching settings:", error);
-        window.appSettings = {};
-    }
-}
 
 const live2dModule = (function() {
     const live2d = PIXI.live2d;
@@ -58,6 +43,15 @@ const live2dModule = (function() {
 
             modelLoaded = true;
             console.log("Live2D model loaded successfully!");
+
+            function loopMotion() {
+                if (model2) {
+                    model2.motion("", 0);
+                    setTimeout(loopMotion, 2000);
+                }
+            }
+        
+            setTimeout(loopMotion, 1000);
         } catch (error) {
             console.error("Error loading Live2D model:", error);
         }
@@ -90,7 +84,8 @@ const live2dModule = (function() {
 })();
 
 function connectWebSocket() {
-    socket = new WebSocket("ws://" + window.location.hostname + ":11405/ws");
+    const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+    socket = new WebSocket(wsProtocol + window.location.hostname + ":11405/ws");
     var wsStatus = document.getElementById("wsStatus");
 
     socket.onopen = function () {
@@ -100,8 +95,8 @@ function connectWebSocket() {
 
         if (!modelLoaded) {
             live2dModule.loadModel({
-                url: "/live2d_models/test/test.model3.json",
-                kScale: 0.4
+                url: window.appSettings["model_path"],
+                kScale: window.appSettings["scale"]
             });
         }
     };
@@ -157,7 +152,7 @@ function connectWebSocket() {
                 })
                 .then(text => {
                     document.getElementById("textDisplay").scrollTop = 0;
-                    if (window.appSettings["chat-interface"]?.["show-sent-prompts"]) {
+                    if (window.appSettings["show-sent-prompts"]) {
                         const textPrefix = document.getElementById("textDisplay").querySelector("strong");
                         textPrefix.textContent = "Latest Response:";
                         textPrefix.style.removeProperty("color");
@@ -288,7 +283,6 @@ document.addEventListener("click", () => {
 });
 
 function initializeApp() {
-    fetchSettings();
     live2dModule.init();
     connectWebSocket();
 }

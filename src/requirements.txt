@@ -1,5 +1,6 @@
 fastapi
 uvicorn
 websockets
-pyyaml
 httpx
+python-multipart
+ruamel.yaml

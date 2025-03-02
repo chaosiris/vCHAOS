@@ -1,33 +1,21 @@
 import os
+import uuid
 import re
 import json
-import yaml
 import asyncio
 import uvicorn
 import httpx
 import logging
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Query
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Query, UploadFile, File, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
-
-# Load configuration from config.yaml
-def load_settings(file_path="settings.yaml"):
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return yaml.safe_load(f)
-    except FileNotFoundError:
-        print("Error: settings.yaml not found, using defaults.")
-        return {} 
-
-# Load constants from settings.yaml
-settings = load_settings()
-HOST = settings.get("app", {}).get("host", "0.0.0.0")
-PORT = settings.get("app", {}).get("port", 11405)
-LOG_LEVEL = settings.get("logging", {}).get("level", "ERROR")
-TIMEOUT_DURATION = settings.get("chat-interface", {}).get("timeout", 180)
+from ruamel.yaml import YAML
 
 # Using FastAPI/WebSockets + Uvicorn for real-time communication
 app = FastAPI()
+yaml = YAML()
+yaml.preserve_quotes = True
+yaml.indent(mapping=2, sequence=4, offset=2)
 connected_clients = set()
 notification_file = "output/new_audio.json"
 
@@ -35,6 +23,23 @@ notification_file = "output/new_audio.json"
 app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 app.mount("/live2d_models", StaticFiles(directory="live2d_models"), name="live2d_models")
 app.mount("/output", StaticFiles(directory="output"), name="output")
+
+# Load configuration from config.yaml
+def load_settings(file_path="settings.yaml"):
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return yaml.load(f)
+    except FileNotFoundError:
+        print("Error: settings.yaml not found, using defaults.")
+        return {} 
+
+# Load constants from settings.yaml
+settings = load_settings()
+HOST = settings.get("backend", {}).get("app", {}).get("host", "0.0.0.0")
+PORT = settings.get("backend", {}).get("app", {}).get("port", 11405)
+PROTOCOL = settings.get("backend", {}).get("app", {}).get("protocol", "http")
+LOG_LEVEL = settings.get("backend", {}).get("logging", {}).get("level", "ERROR").upper()
+TIMEOUT_DURATION = settings.get("frontend", {}).get("timeout", 180)
 
 # Initialize logging framework
 logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s: %(message)s")
@@ -44,9 +49,47 @@ logger = logging.getLogger(__name__)
 async def serve_root():
     return FileResponse("static/index.html")
 
-@app.get("/api/settings")
+@app.get("/api/get_settings")
 async def get_settings():
-    return JSONResponse(settings)
+    try:
+        with open("settings.yaml", "r", encoding="utf-8") as f:
+            settings = yaml.load(f)
+
+        if "frontend" in settings:
+            return JSONResponse(settings["frontend"])
+        else:
+            return JSONResponse({}, status_code=200)
+
+    except FileNotFoundError:
+        return JSONResponse({"error": "settings.yaml not found"}, status_code=404)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/api/update_settings")
+async def update_settings(request: Request):
+    try:
+        data = await request.json()
+
+        validate_settings(data)
+
+        yaml_data = load_settings()
+
+        for key, value in data.items():
+            if isinstance(value, dict) and key in yaml_data:
+                yaml_data[key].update(value)
+            else:
+                yaml_data[key] = value
+
+        with open("settings.yaml", "w", encoding="utf-8") as f:
+            yaml.dump(yaml_data, f)
+
+        return {"success": True, "message": "Settings updated successfully"}
+
+    except HTTPException as e:
+        return {"success": False, "error": e.detail}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 @app.get("/api/get_history")
 async def get_chat_history(search: str = Query(default=None, description="Search query for filtering history")):
@@ -64,8 +107,8 @@ async def get_chat_history(search: str = Query(default=None, description="Search
                     # Load preview text from .txt file (first 50 chars)
                     try:
                         with open(f"output/{file}", "r", encoding="utf-8") as f:
-                            preview_text = f.read(50).strip() 
-                            if len(preview_text) == 50:
+                            preview_text = f.read(80).strip() 
+                            if len(preview_text) == 80:
                                 preview_text += "..."
                     except Exception:
                         preview_text = "Error loading text."
@@ -179,9 +222,32 @@ async def send_to_clients(message: str):
 
     connected_clients.difference_update(disconnected_clients)
 
+# Validate received data for updated settings
+def validate_settings(data):
+    current_settings = load_settings()
+
+    for category, settings in data.items():
+        if category not in current_settings:
+            raise HTTPException(status_code=400, detail=f"Invalid category: {category}")
+
+        for key, value in settings.items():
+            if key not in current_settings[category]:
+                raise HTTPException(status_code=400, detail=f"Invalid setting: {key}")
+
+            expected_type = type(current_settings[category][key])
+            if not isinstance(value, expected_type):
+                raise HTTPException(status_code=400, detail=f"Invalid type for {key}: Expected {expected_type.__name__}, got {type(value).__name__}")
+
+            if category == "frontend" and key == "timeout":
+                if not (30 <= value <= 600):
+                    raise HTTPException(status_code=400, detail="Timeout value must be between 30 and 600")
+
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(monitor_notifications())
 
 if __name__ == "__main__":
-    uvicorn.run(app, host=HOST, port=PORT, log_level=LOG_LEVEL.lower())
+    if PROTOCOL == "https":
+        uvicorn.run(app, host=HOST, port=PORT, log_level=LOG_LEVEL.lower(), ssl_keyfile="key.pem", ssl_certfile="cert.pem")
+    else:
+        uvicorn.run(app, host=HOST, port=PORT, log_level=LOG_LEVEL.lower())

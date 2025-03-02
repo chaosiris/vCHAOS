@@ -1,13 +1,15 @@
-app:
-  host: "0.0.0.0"   # Host address (use 0.0.0.0 for LAN access; or 127.0.0.1 for host machine access only) // Default: 0.0.0.0
-  port: 11405       # Port number for the web server (can be any unassigned port) // Default: 11405
+backend:
+  app:
+    host: "0.0.0.0"   # Host address (use 0.0.0.0 for LAN access; or 127.0.0.1 for host machine access only) // Default: 0.0.0.0
+    port: 11405       # Port number for the web server (can be any unassigned port) // Default: 11405
+    protocol: http   # Use HTTP/HTTPS (For https, cert.pem and key.pem must be present in the same directory as app.py) // Default: http
+  logging:
+    level: "ERROR"    # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL) // Default: ERROR
+  urls:
+    ollama_webhook: http://homeassistant.local:8123/api/webhook/ollama_chat    # Webhook URL for your Ollama endpoint, as configured in HAOS automations.
 
-urls:
-  ollama_webhook: http://homeassistant.local:8123/api/webhook/ollama_chat    # Webhook URL for your Ollama endpoint, as configured in HAOS automations.
-
-logging:
-  level: "ERROR"    # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL) // Default: ERROR
-
-chat-interface:
+frontend:
   show-sent-prompts: true    # After sending a text prompt, should it be displayed? // Default: true
-  timeout: 180     # How long should the user wait for a response from the pipeline before timing out (in seconds?) // Default: 180
+  timeout: 180               # How long should the user wait for a response from the pipeline before timing out (in seconds?) // Default: 180
+  model_path: /live2d_models/test/test.model3.json   # Specify the path of which Live2D model to use // Default: /live2d_models/test/test.model3.json
+  scale: 0.2                 # Specify the initial scaling of the Live2D model // Default: 0.2

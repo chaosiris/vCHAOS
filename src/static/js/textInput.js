@@ -51,16 +51,14 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
     
-        switch (event.key) {
-            case "i":
-                event.preventDefault();
-                textButton.click();
-                break;
+        if (event.key === "i") { 
+            event.preventDefault();
+            textButton.click();
         }
     });
 
     async function sendToBackend(inputText) {
-        if (window.appSettings["chat-interface"]?.["show-sent-prompts"]) {
+        if (window.appSettings["show-sent-prompts"]) {
             let textPrefix = document.getElementById("textDisplay").querySelector("strong");
             textPrefix.textContent = "Sent Prompt:";
             textPrefix.style.color = "lightgreen";
@@ -68,7 +66,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Request timed out after 180 seconds")), window.appSettings["chat-interface"]?.["timeout"] * 1000)
+            setTimeout(() => reject(new Error("Request timed out after 180 seconds")), window.appSettings["timeout"] * 1000)
         );
     
         try {
@@ -91,7 +89,7 @@ document.addEventListener("DOMContentLoaded", function () {
         } catch (error) {
             console.error("Error while sending request:", error);
     
-            if (window.appSettings["chat-interface"]?.["show-sent-prompts"]) {
+            if (window.appSettings["show-sent-prompts"]) {
                 let textPrefix = document.getElementById("textDisplay").querySelector("strong");
                 textPrefix.textContent = "Error Sending Prompt:";
                 textPrefix.style.color = "red";
