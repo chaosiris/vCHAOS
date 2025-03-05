@@ -11,7 +11,8 @@ backend:
 
 frontend:
   show-sent-prompts: true    # After sending a text prompt, should it be displayed? // Default: true
-  enable-text-repeat: true   # Enable the button to re-paste your previous text prompt into the input text field // Default: tre
+  enable-text-repeat: true   # Enable the button to re-paste your previous text prompt into the input text field // Default: true
+  enable-mouth-scaling: true  # Scale the mouth movement of the Live2D model according to the syllables being pronounced. Disable if too resource intensive on older browsers/devices. // Default: true
   timeout: 180               # How long should the user wait for a response from the pipeline before timing out (in seconds?) // Default: 180
-  model_path: /live2d_models/edu_3/edu_3.model3.json               # Specify the path of which Live2D model to use // Default: /live2d_models/test/test.model3.json
+  model_path: /live2d_models/lafeiii_3/lafeiii_3.model3.json       # Specify the path of which Live2D model to use // Default: /live2d_models/test/test.model3.json
   scale: 0.2                 # Specify the initial scaling of the Live2D model // Default: 0.2

@@ -6,7 +6,7 @@ import asyncio
 import uvicorn
 import httpx
 import logging
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Query, UploadFile, File, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Query, UploadFile, File, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from ruamel.yaml import YAML
@@ -45,6 +45,32 @@ TIMEOUT_DURATION = settings.get("frontend", {}).get("timeout", 180)
 logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
+# Validate received data for updated settings
+def validate_settings(data):
+    current_settings = load_settings()
+
+    for category, settings in data.items():
+        if category not in current_settings:
+            raise HTTPException(status_code=400, detail=f"Invalid category: {category}")
+
+        for key, value in settings.items():
+            if key not in current_settings[category]:
+                raise HTTPException(status_code=400, detail=f"Invalid setting: {key}")
+
+            expected_type = type(current_settings[category][key])
+            if not isinstance(value, expected_type):
+                raise HTTPException(status_code=400, detail=f"Invalid type for {key}: Expected {expected_type.__name__}, got {type(value).__name__}")
+
+            if category == "frontend" and key == "timeout":
+                if not (30 <= value <= 600):
+                    raise HTTPException(status_code=400, detail="Timeout value must be between 30 and 600")
+
+# Ensure only clients with an active WebSockets connection can make API POST requests
+def validate_connection(request: Request):
+    client_ip = request.client.host
+    if not any(ip == client_ip for _, ip in connected_clients):
+        raise HTTPException(status_code=403, detail="Unauthorized: WebSocket connection required.")
+
 @app.get("/")
 async def serve_root():
     return FileResponse("static/index.html")
@@ -66,12 +92,10 @@ async def get_settings():
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/api/update_settings")
-async def update_settings(request: Request):
+async def update_settings(request: Request, _: None = Depends(validate_connection)):
     try:
         data = await request.json()
-
         validate_settings(data)
-
         yaml_data = load_settings()
 
         for key, value in data.items():
@@ -92,7 +116,7 @@ async def update_settings(request: Request):
         return {"success": False, "error": str(e)}
 
 @app.get("/api/get_history")
-async def get_chat_history(search: str = Query(default=None, description="Search query for filtering history")):
+async def get_chat_history(search: str = Query(default=None, description="Search query for filtering history"), _: None = Depends(validate_connection)):
     try:
         files = os.listdir("output")
         history = []
@@ -141,7 +165,7 @@ async def get_chat_history(search: str = Query(default=None, description="Search
         return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/api/send_prompt")
-async def send_prompt(request: Request):
+async def send_prompt(request: Request, _: None = Depends(validate_connection)):
     try:
         data = await request.json()
         user_input = data.get("text", "").strip()
@@ -171,8 +195,14 @@ async def send_prompt(request: Request):
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    connected_clients.add(websocket)
     client_ip = websocket.client.host
+
+    stale_clients = {client for client in connected_clients if client[1] == client_ip}
+    for client in stale_clients:
+        await client[0].close()
+        connected_clients.discard(client)
+
+    connected_clients.add((websocket, client_ip))
     logger.info(f"Client {client_ip} connected")
 
     try:
@@ -191,8 +221,30 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"Unexpected WebSocket error for {client_ip}: {e}")
     finally:
-        connected_clients.discard(websocket)
+        connected_clients.discard((websocket, client_ip))
         logger.info(f"Cleaned up WebSocket connection for {client_ip}")
+
+@app.get("/api/clients")
+async def get_connected_clients(_: None = Depends(validate_connection)):
+    return JSONResponse({"clients": [{"ip": ip} for _, ip in connected_clients]})
+
+@app.post("/api/disconnect_client")
+async def disconnect_client(request: Request, _: None = Depends(validate_connection)):
+    try:
+        data = await request.json()
+        client_ip = data.get("ip")
+
+        for client in connected_clients:
+            if client[1] == client_ip:
+                await client[0].send_text("disconnect_client")
+                await client[0].close()
+                connected_clients.remove(client)
+                return JSONResponse({"success": True, "message": f"Client {client_ip} disconnected."})
+
+        return JSONResponse({"success": False, "error": "Client not found."}, status_code=404)
+
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 # Monitor shared notification file to detect if a new TTS output is generated from Piper Docker
 async def monitor_notifications():
@@ -213,36 +265,19 @@ async def monitor_notifications():
 # Send output to frontend
 async def send_to_clients(message: str):
     disconnected_clients = set()
-    for client in connected_clients:
+    
+    for client_tuple in connected_clients:
+        websocket, ip = client_tuple
+
         try:
-            await client.send_text(message)
+            await websocket.send_text(message)
         except WebSocketDisconnect:
-            disconnected_clients.add(client)
+            disconnected_clients.add(client_tuple)
         except Exception as e:
             logger.error(f"Error sending WebSocket message: {e}")
-            disconnected_clients.add(client)
+            disconnected_clients.add(client_tuple)
 
     connected_clients.difference_update(disconnected_clients)
-
-# Validate received data for updated settings
-def validate_settings(data):
-    current_settings = load_settings()
-
-    for category, settings in data.items():
-        if category not in current_settings:
-            raise HTTPException(status_code=400, detail=f"Invalid category: {category}")
-
-        for key, value in settings.items():
-            if key not in current_settings[category]:
-                raise HTTPException(status_code=400, detail=f"Invalid setting: {key}")
-
-            expected_type = type(current_settings[category][key])
-            if not isinstance(value, expected_type):
-                raise HTTPException(status_code=400, detail=f"Invalid type for {key}: Expected {expected_type.__name__}, got {type(value).__name__}")
-
-            if category == "frontend" and key == "timeout":
-                if not (30 <= value <= 600):
-                    raise HTTPException(status_code=400, detail="Timeout value must be between 30 and 600")
 
 @app.on_event("startup")
 async def startup_event():

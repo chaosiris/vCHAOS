@@ -1,11 +1,15 @@
 var app, model2;
 var socket;
 var modelLoaded = false;
+let manualDisconnect = false;
 
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let audioSourceNode = null;
 let analyser = null;
 let dataArray = null;
+let mouthParamId = null;
+let mouthParamMax = 1;
+let mouthParamMin = 0;
 let audioPlayer = document.getElementById("audioPlayer");
 
 const live2dModule = (function() {
@@ -20,8 +24,6 @@ const live2dModule = (function() {
             transparent: true,
             backgroundAlpha: 0,
         });
-
-
     }
 
     async function loadModel(modelInfo) {
@@ -35,27 +37,66 @@ const live2dModule = (function() {
             model2 = await live2d.Live2DModel.from(modelInfo.url);
             app.stage.addChild(model2);
 
-            model2.scale.set(modelInfo.kScale || 0.4);
+            model2.scale.set(modelInfo.kScale || 0.2);
             model2.anchor.set(0.5, 0.5);
             model2.position.set(app.view.width / 2, app.view.height / 2);
 
             draggable(model2);
+            enableHeadTracking(model2);
+
+            mouthParamId = getMouthOpenParam(model2);
+            if (mouthParamId) {
+                let params = model2.internalModel.coreModel;
+                let paramIndex = params._parameterIds.indexOf(mouthParamId);
+                if (paramIndex !== -1) {
+                    mouthParamMin = params._parameterMinimumValues[paramIndex];
+                    mouthParamMax = params._parameterMaximumValues[paramIndex];
+                }
+            }
 
             modelLoaded = true;
             console.log("Live2D model loaded successfully!");
 
-            function loopMotion() {
-                if (model2) {
-                    model2.motion("", 0);
-                    setTimeout(loopMotion, 2000);
-                }
-            }
-        
-            setTimeout(loopMotion, 1000);
         } catch (error) {
             console.error("Error loading Live2D model:", error);
         }
+    }
+    
+    function enableHeadTracking(model) {
+        if (!model || !model.internalModel) return;
+    
+        let focusX = 0, focusY = 0;
+        let targetX = 0, targetY = 0;
+        let velocityX = 0, velocityY = 0;
+        const smoothFactor = 0.08;
+        const accelerationFactor = 1;
 
+        model.interactive = true;
+        model.on("pointermove", (event) => {
+            targetX = (event.data.global.x / window.innerWidth) * 2 - 1;
+            targetY = (event.data.global.y / window.innerHeight) * 2 - 1;
+        });
+    
+        function updateHeadMovement() {
+            const dx = targetX - focusX;
+            const dy = targetY - focusY;
+    
+            velocityX += dx * accelerationFactor;
+            velocityY += dy * accelerationFactor;
+    
+            velocityX *= smoothFactor;
+            velocityY *= smoothFactor;
+    
+            focusX += velocityX * 16;
+            focusY += velocityY * 16;
+    
+            model.internalModel.coreModel.setParameterValueById("ParamAngleX", focusX * 30);
+            model.internalModel.coreModel.setParameterValueById("ParamAngleY", focusY * -30);
+    
+            requestAnimationFrame(updateHeadMovement);
+        }
+    
+        updateHeadMovement();
     }
 
     function draggable(model) {
@@ -84,6 +125,8 @@ const live2dModule = (function() {
 })();
 
 function connectWebSocket() {
+    if (manualDisconnect) return;
+
     const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
     socket = new WebSocket(wsProtocol + window.location.hostname + ":11405/ws");
     var wsStatus = document.getElementById("wsStatus");
@@ -106,7 +149,9 @@ function connectWebSocket() {
         wsStatus.classList.remove("connected");
         wsStatus.classList.add("disconnected");
 
-        setTimeout(connectWebSocket, 5000);
+        if (!manualDisconnect) {
+            setTimeout(connectWebSocket, 5000);
+        }
     };
 
     socket.onerror = function (error) {
@@ -116,6 +161,13 @@ function connectWebSocket() {
     socket.onmessage = function (event) {
 
         if (event.data === "ping") {
+            return;
+        }
+
+        if (event.data === "disconnect_client") {
+            console.log("Received forced disconnect from server.");
+            manualDisconnect = true;
+            disconnectWebSocket();
             return;
         }
 
@@ -170,6 +222,13 @@ function connectWebSocket() {
     };
 }
 
+function disconnectWebSocket() {
+    if (socket) {
+        console.log("Manually disconnecting WebSocket.");
+        socket.close(1000);
+    }
+}
+
 function playAudioLipSync(audioUrl) {
     if (!model2) {
         console.error("Live2D model not loaded. Cannot play animation.");
@@ -205,34 +264,61 @@ function playAudioLipSync(audioUrl) {
     }
 
     function animateMouth() {
-        if (!analyser) return;
+        if (!analyser || !mouthParamId) return;
 
-        analyser.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i];
-        }
-        let average = sum / dataArray.length;
-        let mouthMovement = Math.min(1, average / 32);
+        let mouthMovement = 0;
+        if (window.appSettings["enable-mouth-scaling"]) {
+            analyser.getByteFrequencyData(dataArray);
+    
+            let startFreq = Math.floor(85 / (audioContext.sampleRate / analyser.fftSize));
+            let endFreq = Math.floor(255 / (audioContext.sampleRate / analyser.fftSize));
+        
+            let maxEnergy = 0;
+        
+            for (let i = startFreq; i < endFreq; i++) {
+                if (dataArray[i] > maxEnergy) {
+                    maxEnergy = dataArray[i];
+                }
+            }
 
-        if (typeof model2.internalModel.coreModel.setParameterValueById === "function") {
-            model2.internalModel.coreModel.setParameterValueById("ParamMouthOpenY", mouthMovement);
+            mouthMovement = mouthParamMin + (Math.pow(Math.max(0, Math.min(1, maxEnergy / 255)), 1.2) * (mouthParamMax - mouthParamMin));
         } else {
-            model2.internalModel.coreModel.setParamFloat("PARAM_MOUTH_OPEN_Y", mouthMovement);
+            mouthMovement = mouthParamMax;
         }
-
+    
+        requestAnimationFrame(() => {
+            if (typeof model2.internalModel.coreModel.setParameterValueById === "function") {
+                model2.internalModel.coreModel.setParameterValueById(mouthParamId, mouthMovement);
+            } else {
+                model2.internalModel.coreModel.setParamFloat("PARAM_MOUTH_OPEN_Y", mouthMovement);
+            }
+        });
+    
         if (!audioPlayer.paused) {
             requestAnimationFrame(animateMouth);
         } else {
-            if (typeof model2.internalModel.coreModel.setParameterValueById === "function") {
-                model2.internalModel.coreModel.setParameterValueById("ParamMouthOpenY", 0);
-            } else {
-                model2.internalModel.coreModel.setParamFloat("PARAM_MOUTH_OPEN_Y", 0);
-            }
+            requestAnimationFrame(() => {
+                if (typeof model2.internalModel.coreModel.setParameterValueById === "function") {
+                    model2.internalModel.coreModel.setParameterValueById(mouthParamId, 0);
+                } else {
+                    model2.internalModel.coreModel.setParamFloat("PARAM_MOUTH_OPEN_Y", 0);
+                }
+            });
         }
     }
 
     requestAnimationFrame(animateMouth);
+}
+
+function getMouthOpenParam(model) {
+    if (!model || !model.internalModel || !model.internalModel.coreModel) {
+        console.warn("Model is not fully initialized.");
+        return null;
+    }
+
+    let allParams = model.internalModel.coreModel._parameterIds || model.internalModel.coreModel.parameters.ids;
+    let detectedParam = allParams.find(param => param.startsWith("ParamMouthOpenY"));
+    return detectedParam || "ParamMouthOpenY";
 }
 
 audioPlayer.addEventListener("play", function () {

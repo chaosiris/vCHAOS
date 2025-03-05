@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#000000">
     <title>vCHAOS</title>
 
     <!-- Live2D & PixiJS Libraries -->
@@ -47,11 +48,11 @@
 
     <!-- Settings Modal -->
     <div id="settingsModal" class="hidden">
-        <div class="settings-container">
+        <div class="modal-container">
             <h3>Settings</h3>
 
             <div class="settings-option">
-                <label for="showSentPrompts">Show Sent Prompts:</label>
+                <label for="showSentPrompts">Show Sent Prompts ></label>
                 <label class="toggle-switch">
                     <input type="checkbox" id="showSentPrompts">
                     <span class="slider"></span>
@@ -59,32 +60,52 @@
             </div>
 
             <div class="settings-option">
-                <label for="enableTextRepeat">Enable Text Repeat:</label>
+                <label for="enableTextRepeat">Enable Text Repeat ></label>
                 <label class="toggle-switch">
                     <input type="checkbox" id="enableTextRepeat">
                     <span class="slider"></span>
                 </label>
             </div>
+
+            <div class="settings-option">
+                <label for="enableMouthScaling">Enable Mouth Scaling ></label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="enableMouthScaling">
+                    <span class="slider"></span>
+                </label>
+            </div>
             
             <div class="settings-option">
-                <label for="timeoutInput">Timeout (seconds):</label>
+                <label for="timeoutInput">Timeout (seconds) ></label>
                 <input type="number" id="timeoutInput" min="30" max="600" step="10">
             </div>
 
             <div class="settings-option">
-                <label for="modelInput">Model Path:</label>
+                <label for="modelInput">Model Path ></label>
                 <input type="text" id="modelInput">
             </div>
 
-            <div class="settings-buttons">
+            <div class="modal-buttons">
                 <button id="applySettings">Apply</button>
                 <button id="cancelSettings">Cancel</button>
             </div>
         </div>
     </div>
 
+    <!-- Connected Clients Modal -->
+    <div id="clientsModal" class="hidden">
+        <div class="modal-container">
+            <h3>Connected Clients</h3>
+            <div id="clientsList"></div>
+            <div class="modal-buttons">
+                <button id="closeClients">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div class="bottom-wrapper">
         <button id="historyButton" class="history-icon">📜</button>
+        <button id="clientsButton" class="clients-icon">💻</button>
         <button id="settingsButton" class="settings-icon">⚙️</button>
         <button id="repeatButton" class="repeat-icon hidden">🔁</button>
         <button id="voiceButton" class="voice-icon">🎤</button>
@@ -98,9 +119,11 @@
         </div>
     </div>    
 
+    <script src="/static/js/settings.js"></script>
     <script src="/static/js/init.js"></script>
     <script src="/static/js/textInput.js"></script>
+    <script src="/static/js/voiceInput.js"></script>
     <script src="/static/js/chatHistory.js"></script>
-    <script src="/static/js/settings.js"></script>
+    <script src="/static/js/clients.js"></script>
 </body>
 </html>

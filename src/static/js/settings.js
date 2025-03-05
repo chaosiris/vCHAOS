@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const showSentPrompts = document.getElementById("showSentPrompts");
     const enableTextRepeat = document.getElementById("enableTextRepeat");
+    const enableMouthScaling = document.getElementById("enableMouthScaling");
     const timeoutInput = document.getElementById("timeoutInput");
     const modelInput = document.getElementById("modelInput");
 
@@ -30,6 +31,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     settingsButton.addEventListener("click", async function () {
         showSentPrompts.checked = window.appSettings["show-sent-prompts"];
         enableTextRepeat.checked = window.appSettings["enable-text-repeat"];
+        enableMouthScaling.checked = window.appSettings["enable-mouth-scaling"];
         timeoutInput.value = window.appSettings["timeout"];
         modelInput.value = window.appSettings["model_path"];
         initModelPath = modelInput.value;
@@ -56,6 +58,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             "frontend": {
                 "show-sent-prompts": showSentPrompts.checked,
                 "enable-text-repeat": enableTextRepeat.checked,
+                "enable-mouth-scaling": enableMouthScaling.checked,
                 "timeout": parseInt(timeoutInput.value),
                 "model_path": modelInput.value
             }

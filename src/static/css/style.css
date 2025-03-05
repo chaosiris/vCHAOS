@@ -193,7 +193,7 @@ body {
 .settings-icon {
     position: absolute;
     bottom: calc(100% + 5px);
-    left: 60px;
+    left: 105px;
     background: none;
     color: white;
     font-size: 18px;
@@ -216,7 +216,7 @@ body {
     z-index: 2000;
 }
 
-.settings-container {
+.modal-container {
     background: rgba(50, 50, 50, 0.9);
     padding: 20px;
     border-radius: 10px;
@@ -297,11 +297,11 @@ input:checked + .slider:before {
     max-width: 200px;
 }
 
-.settings-buttons {
+.modal-buttons {
     margin-top: 10px;
 }
 
-.settings-buttons button {
+.modal-buttons button {
     background: rgba(255, 255, 255, 0.3);
     border: none;
     color: white;
@@ -311,8 +311,60 @@ input:checked + .slider:before {
     margin: 5px;
 }
 
-.settings-buttons button:hover {
+.modal-buttons button:hover {
     background: rgba(255, 255, 255, 0.5);
+}
+
+.clients-icon {
+    position: absolute;
+    bottom: calc(100% + 5px);
+    left: 60px;
+    background: none;
+    color: white;
+    font-size: 18px;
+    border: none;
+    cursor: pointer;
+    z-index: 10;
+}
+
+#clientsModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+}
+
+#clientsList {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 10px;
+    text-align: left;
+}
+
+.client-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+}
+
+.client-item button {
+    background: red;
+    color: white;
+    border: none;
+    padding: 5px;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
 .input-container {
@@ -410,7 +462,6 @@ canvas {
     box-sizing: border-box;
     margin: 0 auto;
 }
-
 
 #searchInput {
     width: 100%;
