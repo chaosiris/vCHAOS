@@ -6,6 +6,7 @@ import asyncio
 import uvicorn
 import httpx
 import logging
+import shutil
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Query, UploadFile, File, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -17,6 +18,8 @@ yaml = YAML()
 yaml.preserve_quotes = True
 yaml.indent(mapping=2, sequence=4, offset=2)
 connected_clients = set()
+pending_deletions = {}  # Track files pending deletion
+client_receipts = {}  # Track which clients have received a given file
 notification_file = "output/new_audio.json"
 
 # Serve static files
@@ -39,6 +42,7 @@ HOST = settings.get("backend", {}).get("app", {}).get("host", "0.0.0.0")
 PORT = settings.get("backend", {}).get("app", {}).get("port", 11405)
 PROTOCOL = settings.get("backend", {}).get("app", {}).get("protocol", "http")
 LOG_LEVEL = settings.get("backend", {}).get("logging", {}).get("level", "ERROR").upper()
+SAVE_CHAT_HISTORY = bool(settings.get("frontend", {}).get("save-chat-history", True))
 TIMEOUT_DURATION = settings.get("frontend", {}).get("timeout", 180)
 
 # Initialize logging framework
@@ -192,6 +196,14 @@ async def send_prompt(request: Request, _: None = Depends(validate_connection)):
     except Exception as e:
         return {"success": False, "error": f"Application error: {str(e)}"}
 
+@app.post("/api/archive_chat_history")
+async def archive_chat_history():
+    return await process_chat_history("archive")
+
+@app.delete("/api/delete_chat_history")
+async def delete_chat_history():
+    return await process_chat_history("delete")
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -199,7 +211,10 @@ async def websocket_endpoint(websocket: WebSocket):
 
     stale_clients = {client for client in connected_clients if client[1] == client_ip}
     for client in stale_clients:
-        await client[0].close()
+        try:
+            await client[0].close()
+        except Exception:
+            pass
         connected_clients.discard(client)
 
     connected_clients.add((websocket, client_ip))
@@ -210,12 +225,25 @@ async def websocket_endpoint(websocket: WebSocket):
             try:
                 message = await asyncio.wait_for(websocket.receive_text(), timeout=60)
                 logger.info(f"Received WebSocket message from {client_ip}: {message}")
+
+                if not SAVE_CHAT_HISTORY:
+                    if message.startswith("ack:"):
+                        file_id = message.split("ack:")[1].strip()
+                        logger.debug(f"Received acknowledgment for file ID: {file_id}")
+
+                        if file_id in pending_deletions:
+                            pending_deletions[file_id]["acknowledged_clients"].add(client_ip)
+                            logger.debug(f"Acknowledged clients: {pending_deletions[file_id]['acknowledged_clients']}")
+
+                            if len(pending_deletions[file_id]["acknowledged_clients"]) >= len(connected_clients):
+                                files_to_delete = {k: v for k, v in pending_deletions.pop(file_id, {}).items() if k != "acknowledged_clients"}
+                                filelist = [os.path.basename(v) for v in files_to_delete.values()]
+                                deletion_result = await process_chat_history("delete", filelist)
+
             except asyncio.TimeoutError:
-                await websocket.send_text("ping")  # Keep-alive ping to prevent timeout
-    except WebSocketDisconnect:
+                await websocket.send_text("ping") # Keep-alive ping
+    except (WebSocketDisconnect, ConnectionResetError):
         logger.info(f"Client {client_ip} disconnected")
-    except ConnectionResetError:
-        logger.warning(f"Connection reset by {client_ip}")
     except asyncio.CancelledError:
         logger.warning(f"WebSocket connection for {client_ip} was cancelled")
     except Exception as e:
@@ -253,14 +281,65 @@ async def monitor_notifications():
             try:
                 with open(notification_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
+                audio_path = data.get("audio_file", "").strip()
+                text_path = audio_path.replace(".wav", ".txt") if audio_path.endswith(".wav") else ""
                 await send_to_clients(json.dumps(data))
                 os.remove(notification_file)
+
+                if not SAVE_CHAT_HISTORY:
+                    file_id = os.path.splitext(os.path.basename(audio_path))[0] if audio_path else None
+                    pending_deletions[file_id] = {
+                        "audio": audio_path,
+                        "text": text_path,
+                        "acknowledged_clients": set()
+                    }
             except json.JSONDecodeError:
                 logger.error("Error decoding JSON from notification file")
             except Exception as e:
                 logger.error(f"Error processing notification file: {e}")
 
         await asyncio.sleep(1)
+
+async def process_chat_history(action: str, filenames: list[str] = None):
+    os.makedirs("archived", exist_ok=True)
+    files_processed = 0
+    filename_pattern = re.compile(r"^\d{19}\.(wav|txt)$")
+
+    with os.scandir("output") as entries:
+        for entry in entries:
+            if entry.is_file() and re.fullmatch(filename_pattern, entry.name):
+                if filenames and entry.name not in filenames:
+                    continue
+
+                try:
+                    if action == "archive":
+                        shutil.move(entry.path, os.path.join("archived", entry.name))
+                    elif action == "delete":
+                        secure_delete(entry.path)
+                    files_processed += 1
+                except Exception as e:
+                    return {"success": False, "error": f"Failed to {action} {entry.name}: {str(e)}"}
+
+    return {
+        "success": files_processed > 0,
+        "message": f"{action.capitalize()}d {files_processed} chat history files."
+        if files_processed else f"No valid chat history files found to {action}."
+    }
+
+def secure_delete(file_path, passes=3):
+    try:
+        if os.path.exists(file_path):
+            with open(file_path, "wb") as f:
+                length = os.path.getsize(file_path)
+                for _ in range(passes):
+                    f.seek(0)
+                    f.write(os.urandom(length))
+                    f.flush()
+                    os.fsync(f.fileno())
+
+            os.remove(file_path)
+    except Exception as e:
+        print(f"Error securely deleting {file_path}: {e}")
 
 # Send output to frontend
 async def send_to_clients(message: str):

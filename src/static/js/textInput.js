@@ -68,7 +68,24 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
     
-        if (event.key === "i") { 
+        const historySidebar = document.getElementById("historySidebar");
+        const clientsModal = document.getElementById("clientsModal");
+        const settingsModal = document.getElementById("settingsModal");
+        const confirmationModal = document.getElementById("confirmationModal");
+    
+        if (
+            (historySidebar && !historySidebar.classList.contains("hidden")) ||
+            (clientsModal && !clientsModal.classList.contains("hidden")) ||
+            (settingsModal && !settingsModal.classList.contains("hidden")) ||
+            (confirmationModal && !confirmationModal.classList.contains("hidden"))
+        ) {
+            return;
+        }
+    
+        const textInput = document.getElementById("userInput");
+        const sendButton = document.getElementById("sendButton");
+    
+        if (event.key === "i") {
             event.preventDefault();
             textButton.click();
         }

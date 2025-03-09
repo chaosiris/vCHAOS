@@ -11,6 +11,7 @@ body {
     margin: 0;
     padding: 0;
     overflow: hidden;
+    transition: background-image 1s ease-in-out;
     background-size: cover;
     background-position: center center;
     background-attachment: fixed;
@@ -362,6 +363,62 @@ input:checked + .slider:before {
     cursor: pointer;
 }
 
+#confirmationModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+}
+
+#confirmationModal .modal-container {
+    background: rgba(50, 50, 50, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    width: 320px;
+    color: white;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#confirmationModal .modal-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+#confirmAction, #cancelAction {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+}
+
+#confirmAction:hover {
+    background: rgba(0, 255, 0, 0.5);
+}
+
+#cancelAction:hover {
+    background: rgba(255, 0, 0, 0.5);
+}
+
+#confirmationResult {
+    margin-top: 10px;
+    font-size: 16px;
+    color: lightgray;
+}
+
 .input-container {
     width: 100%;
     display: flex;
@@ -503,8 +560,9 @@ canvas {
 
 #closeSidebar {
     position: absolute;
-    top: calc(10px + 50px);
-    left: calc(320px - 36px);
+    max-width: 46px;
+    max-height: 46px;
+    left: calc(320px - 46px);
     background: none;
     color: white;
     font-size: 22px;
@@ -517,6 +575,39 @@ canvas {
 
 #closeSidebar:hover {
     color: red; 
+}
+
+.history-actions {
+    display: flex;
+    width: 100%;
+}
+
+#archiveButton, #deleteButton {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+#archiveButton {
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+}
+
+#deleteButton {
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+}
+
+#archiveButton:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+#deleteButton:hover {
+    background-color: rgba(255, 0, 0, 0.5);
 }
 
 @media (max-width: 768px) {
@@ -540,8 +631,7 @@ canvas {
     }
 
     #closeSidebar {
-        top: calc(10px + 100px);
-        left: calc(256px - 50px);
+        left: calc(256px - 46px);
     }
 }
 

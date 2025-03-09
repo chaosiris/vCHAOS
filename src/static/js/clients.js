@@ -13,6 +13,34 @@ document.addEventListener("DOMContentLoaded", function () {
         clientsModal.classList.add("hidden");
     });
 
+    clientsModal.addEventListener("click", function (event) {
+        if (event.target === clientsModal) {
+            clientsModal.classList.add("hidden");
+        }
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
+            return;
+        }
+    
+        const clientsModal = document.getElementById("clientsModal");
+        const settingsModal = document.getElementById("settingsModal");
+        const confirmationModal = document.getElementById("confirmationModal");
+    
+        if (settingsModal && !settingsModal.classList.contains("hidden")) return;
+        if (confirmationModal && !confirmationModal.classList.contains("hidden")) return;
+    
+        if (event.key === "c") {
+            event.preventDefault();
+            if (clientsModal.classList.contains("hidden")) {
+                clientsButton.click();
+            } else {
+                closeClients.click();
+            }
+        }
+    });
+
     async function loadConnectedClients() {
         try {
             const response = await fetch("/api/clients");
@@ -59,7 +87,7 @@ document.addEventListener("DOMContentLoaded", function () {
     
             const result = await response.json();
             if (result.success) {
-                console.log(`Client ${ip} disconnected.`);
+                await loadConnectedClients(); // Update list
             } else {
                 console.error("Failed to disconnect client:", result.error);
             }

@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const showSentPrompts = document.getElementById("showSentPrompts");
     const enableTextRepeat = document.getElementById("enableTextRepeat");
     const enableMouthScaling = document.getElementById("enableMouthScaling");
+    const saveChatHistory = document.getElementById("saveChatHistory");
     const timeoutInput = document.getElementById("timeoutInput");
     const modelInput = document.getElementById("modelInput");
 
@@ -32,10 +33,33 @@ document.addEventListener("DOMContentLoaded", async function () {
         showSentPrompts.checked = window.appSettings["show-sent-prompts"];
         enableTextRepeat.checked = window.appSettings["enable-text-repeat"];
         enableMouthScaling.checked = window.appSettings["enable-mouth-scaling"];
+        saveChatHistory.checked = window.appSettings["save-chat-history"];
         timeoutInput.value = window.appSettings["timeout"];
         modelInput.value = window.appSettings["model_path"];
         initModelPath = modelInput.value;
         settingsModal.classList.remove("hidden");
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
+            return;
+        }
+    
+        const clientsModal = document.getElementById("clientsModal");
+        const settingsModal = document.getElementById("settingsModal");
+        const confirmationModal = document.getElementById("confirmationModal");
+    
+        if (clientsModal && !clientsModal.classList.contains("hidden")) return;
+        if (confirmationModal && !confirmationModal.classList.contains("hidden")) return;
+    
+        if (event.key === "s") {
+            event.preventDefault();
+            if (settingsModal.classList.contains("hidden")) {
+                settingsButton.click();
+            } else {
+                cancelSettings.click();
+            }
+        }
     });
 
     timeoutInput.addEventListener("input", function () {
@@ -59,6 +83,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 "show-sent-prompts": showSentPrompts.checked,
                 "enable-text-repeat": enableTextRepeat.checked,
                 "enable-mouth-scaling": enableMouthScaling.checked,
+                "save-chat-history": saveChatHistory.checked,
                 "timeout": parseInt(timeoutInput.value),
                 "model_path": modelInput.value
             }

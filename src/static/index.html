@@ -35,8 +35,8 @@
         <canvas id="canvas"></canvas>
     </div>
 
-    <button id="closeSidebar" class="hidden">✖</button>
     <div class="sidebar hidden" id="historySidebar">
+        <button id="closeSidebar">✖</button>
         <h3>Chat History</h3>
         
         <div class="search-container">
@@ -44,6 +44,11 @@
             <button id="searchButton">🔍</button>
         </div>
         <div id="historyList"></div>
+
+        <div class="history-actions">
+            <button id="deleteButton">🗑 Delete</button>
+            <button id="archiveButton">📦 Archive</button> 
+        </div>
     </div>
 
     <!-- Settings Modal -->
@@ -71,6 +76,14 @@
                 <label for="enableMouthScaling">Enable Mouth Scaling ></label>
                 <label class="toggle-switch">
                     <input type="checkbox" id="enableMouthScaling">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="settings-option">
+                <label for="saveChatHistory">Save Chat History ></label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="saveChatHistory">
                     <span class="slider"></span>
                 </label>
             </div>
@@ -103,6 +116,18 @@
         </div>
     </div>
 
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="hidden">
+        <div class="modal-container">
+            <h3 id="confirmationTitle">Confirm Action</h3>
+            <p id="confirmationText">Are you sure you want to proceed?</p>
+            <div class="modal-buttons">
+                <button id="confirmAction">Confirm</button>
+                <button id="cancelAction">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <div class="bottom-wrapper">
         <button id="historyButton" class="history-icon">📜</button>
         <button id="clientsButton" class="clients-icon">💻</button>
@@ -119,12 +144,12 @@
         </div>
     </div>    
 
-    <script src="/static/js/settings.js"></script>
-    <script src="/static/js/init.js"></script>
-    <script src="/static/js/textInput.js"></script>
-    <script src="/static/js/voiceInput.js"></script>
-    <script src="/static/js/chatHistory.js"></script>
-    <script src="/static/js/clients.js"></script>
-    <script src="/static/js/adaptiveBg.js"></script>
+    <script src="/static/js/settings.js" defer></script>
+    <script src="/static/js/init.js" defer></script>
+    <script src="/static/js/textInput.js" defer></script>
+    <script src="/static/js/voiceInput.js" defer></script>
+    <script src="/static/js/chatHistory.js" defer></script>
+    <script src="/static/js/clients.js" defer></script>
+    <script src="/static/js/adaptiveBg.js" defer></script>
 </body>
 </html>

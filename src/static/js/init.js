@@ -20,6 +20,7 @@ const live2dModule = (function() {
             view: document.getElementById("canvas"),
             autoStart: true,
             autoDensity: true,
+            antiAlias: true,
             resizeTo: window,
             transparent: true,
             backgroundAlpha: 0,
@@ -150,6 +151,7 @@ function connectWebSocket() {
         wsStatus.classList.add("disconnected");
 
         if (!manualDisconnect) {
+            document.dispatchEvent(new Event("backgroundUpdate"));
             setTimeout(connectWebSocket, 5000);
         }
     };
@@ -196,28 +198,40 @@ function connectWebSocket() {
             var textFilePath = audioFilePath.replace(".wav", ".txt");
 
             fetch(textFilePath)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error("Text file not found");
-                    }
-                    return response.text();
-                })
+                .then(response => response.ok ? response.text() : Promise.reject("Text file not found"))
                 .then(text => {
+                    textContent = text;
+                    return fetch(audioFilePath);
+                })
+                .then(response => response.ok ? response.blob() : Promise.reject("Audio file not found"))
+                .then(blob => {
+                    audioUrl = URL.createObjectURL(blob);
+
                     document.getElementById("textDisplay").scrollTop = 0;
                     if (window.appSettings["show-sent-prompts"]) {
                         const textPrefix = document.getElementById("textDisplay").querySelector("strong");
                         textPrefix.textContent = "Latest Response:";
                         textPrefix.style.removeProperty("color");
                     }
-                    textOutput.innerText = text;
+                    textOutput.innerText = textContent;
+
+                    if (!historySidebar.classList.contains("hidden")) {
+                        document.dispatchEvent(new Event("chatHistoryUpdate"));
+                    }
+
+                    playAudioLipSync(audioUrl);
+                    updateStatus("received");
+
+                    if (!window.appSettings["save-chat-history"]) {
+                        var fileIdMatch = audioFilePath.match(/(\d{19})/);
+                        var fileId = fileIdMatch[0];
+                        socket.send(`ack:${fileId}`);
+                    }
                 })
                 .catch(error => {
-                    console.error("Failed to load text file:", error);
-                    textOutput.innerText = "No text available.";
+                    console.error("Failed to load files:", error);
+                    textOutput.innerText = "No text response provided by LLM. Please check your connection or try resending your prompt!";
                 });
-
-            updateStatus("received");
-            playAudioLipSync(audioFilePath);
         }
     };
 }
@@ -368,7 +382,10 @@ document.addEventListener("click", () => {
     });
 });
 
-function initializeApp() {
+async function initializeApp() {
+    while (!window.appSettings || Object.keys(window.appSettings).length === 0) {
+        await new Promise(resolve => setTimeout(resolve, 10)); // Ensure settings are loaded first
+    }
     live2dModule.init();
     connectWebSocket();
 }

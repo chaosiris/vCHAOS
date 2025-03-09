@@ -1,21 +1,27 @@
 document.addEventListener("DOMContentLoaded", function () {
+    const archiveButton = document.getElementById("archiveButton");
+    const deleteButton = document.getElementById("deleteButton");
     const historyButton = document.getElementById("historyButton");
     const historySidebar = document.getElementById("historySidebar");
     const historyList = document.getElementById("historyList");
     const closeSidebar = document.getElementById("closeSidebar");
 
+    archiveButton.addEventListener("click", async function () {
+        await archiveChatHistory();
+    });
+
+    deleteButton.addEventListener("click", async function () {
+        await deleteChatHistory();
+    });
+
     historyButton.addEventListener("click", async function () {
         historySidebar.classList.remove("hidden");
-        closeSidebar.classList.remove("hidden");
         historySidebar.classList.add("show");
-        closeSidebar.classList.add("show");
         await loadChatHistory();
     });
 
     function closeSidebarPanel() {
         historySidebar.classList.remove("show");
-        closeSidebar.classList.remove("show");
-        closeSidebar.classList.add("hidden");
         setTimeout(() => {
             historySidebar.classList.add("hidden");
         }, 300);
@@ -27,21 +33,41 @@ document.addEventListener("DOMContentLoaded", function () {
             closeSidebarPanel();
         }
     });
-
+    
     document.addEventListener("keydown", function (event) {
         if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
             return;
         }
     
-        if (event.key === "h") { 
-            event.preventDefault();
-            const isSidebarOpen = historySidebar.classList.contains("show");
+        const clientsModal = document.getElementById("clientsModal");
+        const settingsModal = document.getElementById("settingsModal");
+        const confirmationModal = document.getElementById("confirmationModal");
     
-            if (isSidebarOpen) {
+        if (clientsModal && !clientsModal.classList.contains("hidden")) return;
+        if (settingsModal && !settingsModal.classList.contains("hidden")) return;
+        if (confirmationModal && !confirmationModal.classList.contains("hidden")) return;
+    
+        const historySidebar = document.getElementById("historySidebar");
+    
+        if (event.key === "h") {
+            event.preventDefault();
+            if (historySidebar.classList.contains("show")) {
                 closeSidebar.click();
             } else {
                 historyButton.click();
             }
+        }
+    });
+
+    document.addEventListener("chatHistoryUpdate", () => loadChatHistory());
+
+    searchButton.addEventListener("click", function () {
+        loadChatHistory(searchInput.value);
+    });
+    
+    searchInput.addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+            loadChatHistory(searchInput.value);
         }
     });
 
@@ -88,16 +114,6 @@ document.addEventListener("DOMContentLoaded", function () {
             console.error(error);
         }
     }
-
-    searchButton.addEventListener("click", function () {
-        loadChatHistory(searchInput.value);
-    });
-    
-    searchInput.addEventListener("keypress", function (event) {
-        if (event.key === "Enter") {
-            loadChatHistory(searchInput.value);
-        }
-    });
     
     async function loadChatFromHistory(wavFile, txtFile) {
         const textOutput = document.getElementById("textOutput");
@@ -132,5 +148,94 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
             };
         }, 50);
+    }
+
+    async function showConfirmationModal(action) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById("confirmationModal");
+            const confirmButton = document.getElementById("confirmAction");
+            const cancelButton = document.getElementById("cancelAction");
+            const confirmationText = document.getElementById("confirmationText");
+
+            document.getElementById("confirmationTitle").textContent =
+                action === "archive" ? "Confirm Archive" : "Confirm Deletion";
+            confirmationText.textContent =
+                action === "archive" ? "Are you sure you want to archive chat history?" : "Are you sure you want to delete chat history?";
+            
+            confirmButton.classList.remove("hidden");
+            cancelButton.textContent = "Cancel";
+            cancelButton.style.margin = "";
+            cancelButton.classList.remove("hidden");
+
+            modal.classList.remove("hidden");
+
+            confirmButton.onclick = () => {
+                modal.classList.add("pending");
+                confirmButton.classList.add("hidden");
+                cancelButton.classList.add("hidden");
+                resolve(true);
+            };
+
+            cancelButton.onclick = () => {
+                modal.classList.add("hidden");
+                resolve(false);
+            };
+
+            modal.onclick = (event) => {
+                if (event.target === modal) {
+                    modal.classList.add("hidden");
+                    resolve(false);
+                }
+            };
+        });
+    }
+
+    async function archiveChatHistory() {
+        const confirmed = await showConfirmationModal("archive");
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch("/api/archive_chat_history", { method: "POST" });
+            const data = await response.json();
+            let message = response.ok && data.success ? data.message : "No files available for archive!";
+            displayResultMessage(message);
+            if (data.success) await loadChatHistory();
+        } catch {
+            displayResultMessage("Error archiving chat history.");
         }
+    }
+
+    async function deleteChatHistory() {
+        const confirmed = await showConfirmationModal("delete");
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch("/api/delete_chat_history", { method: "DELETE" });
+            const data = await response.json();
+            let message = response.ok && data.success ? data.message : "No files available for deletion!";
+            displayResultMessage(message);
+            if (data.success) await loadChatHistory();
+        } catch {
+            displayResultMessage("Error deleting chat history.");
+        }
+    }
+
+    function displayResultMessage(message) {
+        const modal = document.getElementById("confirmationModal");
+        const confirmationText = document.getElementById("confirmationText");
+        const confirmButton = document.getElementById("confirmAction");
+        const cancelButton = document.getElementById("cancelAction");
+
+        confirmButton.classList.add("hidden");
+        confirmationText.textContent = message;
+        confirmationText.classList.remove("hidden");
+
+        cancelButton.textContent = "Ok";
+        cancelButton.style.margin = "0 auto";
+        cancelButton.classList.remove("hidden");
+
+        cancelButton.onclick = () => {
+            modal.classList.add("hidden");
+        };
+    }
 });
