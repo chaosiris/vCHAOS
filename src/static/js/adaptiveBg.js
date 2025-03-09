@@ -1,15 +1,9 @@
 function updateBackground() {
     const hour = new Date().getHours();
-    /* Images sourced from Freepik */
-    /* License: Free (Attribution Required) */
     const backgrounds = {
-        /* URL: https://www.freepik.com/free-ai-image/anime-style-cozy-home-interior-with-furnishings_133783512.htm */
         day: "/static/img/background.jpg",
-        /* URL: https://www.freepik.com/free-ai-image/cartoon-style-summer-scene-with-window-view_94510186.htm */
         evening: "/static/img/evening.jpg",
-        /* URL: https://www.freepik.com/free-ai-image/anime-style-cozy-home-interior-with-furnishings_133783486.htm */
         night: "/static/img/night.jpg",
-        /* URL: https://www.freepik.com/free-ai-image/cozy-home-interior-anime-style_133783432.htm */
         dusk: "/static/img/dusk.jpg"
     };
 
@@ -20,25 +14,45 @@ function updateBackground() {
         backgrounds.dusk;
 
     if (document.body.dataset.bg !== backgroundImage) {
-        document.body.style.backgroundImage = `url('${backgroundImage}')`;
-        document.body.dataset.bg = backgroundImage;
+        const img = new Image();
+        img.src = backgroundImage;
+        img.onload = () => {
+            document.body.style.backgroundImage = `url('${backgroundImage}')`;
+            document.body.dataset.bg = backgroundImage;
+            console.log(`Background updated to: ${backgroundImage}`);
+        };
     }
+
+    scheduleNextUpdate();
+}
+
+function getNextUpdateTime() {
+    const now = new Date();
+    const schedule = [4, 9, 16, 19]; 
+    const nextHour = schedule.find(h => h > now.getHours()) || schedule[0];
+    const nextUpdate = new Date(now);
+    nextUpdate.setHours(nextHour, 0, 0, 0);
+    
+    if (nextUpdate < now) {
+        nextUpdate.setDate(now.getDate() + 1);
+    }
+
+    return nextUpdate - now;
 }
 
 function scheduleNextUpdate() {
-    const now = new Date();
-    const nextHour = new Date(now);
-    nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+    if (scheduleNextUpdate.timeoutId) {
+        clearTimeout(scheduleNextUpdate.timeoutId);
+    }
 
-    const timeUntilNextHour = nextHour - now;
-
-    setTimeout(() => {
-        updateBackground();
-        scheduleNextUpdate();
-    }, timeUntilNextHour);
+    const timeUntilNextUpdate = getNextUpdateTime();
+    scheduleNextUpdate.timeoutId = setTimeout(() => {
+        document.dispatchEvent(new Event("backgroundUpdate"));
+    }, timeUntilNextUpdate);
 }
+
+document.addEventListener("backgroundUpdate", () => updateBackground());
 
 document.addEventListener("DOMContentLoaded", () => {
     updateBackground();
-    scheduleNextUpdate();
 });
