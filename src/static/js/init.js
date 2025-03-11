@@ -136,6 +136,9 @@ function connectWebSocket() {
         wsStatus.textContent = "Connected";
         wsStatus.classList.remove("disconnected");
         wsStatus.classList.add("connected");
+        if (window.appSettings["adaptive-background"]) {
+            document.dispatchEvent(new Event("backgroundUpdate"));
+        }
 
         if (!modelLoaded) {
             live2dModule.loadModel({
@@ -151,7 +154,6 @@ function connectWebSocket() {
         wsStatus.classList.add("disconnected");
 
         if (!manualDisconnect) {
-            document.dispatchEvent(new Event("backgroundUpdate"));
             setTimeout(connectWebSocket, 5000);
         }
     };

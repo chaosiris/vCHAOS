@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const enableTextRepeat = document.getElementById("enableTextRepeat");
     const enableMouthScaling = document.getElementById("enableMouthScaling");
     const saveChatHistory = document.getElementById("saveChatHistory");
+    const adaptiveBg = document.getElementById("adaptiveBg");
     const timeoutInput = document.getElementById("timeoutInput");
     const modelInput = document.getElementById("modelInput");
 
@@ -34,6 +35,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         enableTextRepeat.checked = window.appSettings["enable-text-repeat"];
         enableMouthScaling.checked = window.appSettings["enable-mouth-scaling"];
         saveChatHistory.checked = window.appSettings["save-chat-history"];
+        adaptiveBg.checked = window.appSettings["adaptive-background"];
         timeoutInput.value = window.appSettings["timeout"];
         modelInput.value = window.appSettings["model_path"];
         initModelPath = modelInput.value;
@@ -86,6 +88,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 "enable-text-repeat": enableTextRepeat.checked,
                 "enable-mouth-scaling": enableMouthScaling.checked,
                 "save-chat-history": saveChatHistory.checked,
+                "adaptive-background": adaptiveBg.checked,
                 "timeout": parseInt(timeoutInput.value),
                 "model_path": modelInput.value
             }
