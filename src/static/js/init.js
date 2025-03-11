@@ -331,7 +331,8 @@ function getMouthOpenParam(model) {
     }
 
     let allParams = model.internalModel.coreModel._parameterIds || model.internalModel.coreModel.parameters.ids;
-    let detectedParam = allParams.find(param => param.startsWith("ParamMouthOpenY"));
+    let detectedParam = allParams.find(param => param.startsWith("ParamMouthOpenY")) || 
+                        allParams.find(param => param.startsWith("ParamMouthOpen"));
     return detectedParam || "ParamMouthOpenY";
 }
 

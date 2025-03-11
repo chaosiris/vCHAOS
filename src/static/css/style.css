@@ -3,9 +3,6 @@ html, body {
     -webkit-text-size-adjust: 100%;
     -moz-text-size-adjust: 100%;
     -ms-text-size-adjust: 100%;
-}
-
-body {
     font-family: Arial, sans-serif;
     color: white;
     margin: 0;
@@ -13,25 +10,25 @@ body {
     overflow: hidden;
     transition: background-image 1s ease-in-out;
     background-size: cover;
-    background-position: center center;
+    background-position: center;
     background-attachment: fixed;
     background-repeat: no-repeat;
 }
 
-.top-left-container {
+.top-left-container, .top-right-container {
     position: absolute;
-    display: flex;
     top: 10px;
-    left: 10px;
     z-index: 1;
+}
+
+.top-left-container {
+    left: 10px;
+    display: flex;
     pointer-events: none;
 }
 
 .top-right-container {
-    position: absolute;
-    top: 10px;
     right: 10px;
-    z-index: 1;
 }
 
 .connected, .disconnected, #responseStatus {
@@ -41,45 +38,20 @@ body {
     border-radius: 5px;
     user-select: none;
     pointer-events: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
     touch-action: manipulation;
 }
 
-.connected {
-    background-color: green;
-    font-weight: bold;
-}
-
-.disconnected {
-    background-color: red;
-    font-weight: bold;
-}
-
 #responseStatus {
-    margin-left: 10px;
+    margin-left: 5px;
 }
 
-.status-idle {
-    background-color: darkslategray;
-}
-
-.status-waiting {
-    background-color: darkorange;
-}
-
-.status-received {
-    background-color: darkgreen;
-}
-
-.status-error {
-    background-color: darkred;
-}
-
-.status-timeout {
-    background-color: black;
-}
+.connected { background-color: green; font-weight: bold; }
+.disconnected { background-color: red; font-weight: bold; }
+.status-idle { background-color: darkslategray; }
+.status-waiting { background-color: darkorange; }
+.status-received { background-color: darkgreen; }
+.status-error { background-color: darkred; }
+.status-timeout { background-color: black; }
 
 .bottom-wrapper {
     position: fixed;
@@ -87,41 +59,29 @@ body {
     width: 100%;
 }
 
-.text-icon {
+.text-icon, .repeat-icon, .history-icon, .voice-icon, .settings-icon, .clients-icon {
     position: absolute;
     bottom: calc(100% + 5px);
-    right: 15px;
     background: none;
     color: white;
-    font-size: 18px;
+    font-size: 20px;
     border: none;
     cursor: pointer;
     z-index: 10;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
-.repeat-icon {
-    position: absolute;
-    bottom: calc(100% + 5px);
-    right: 105px;
-    background: none;
-    color: white;
-    font-size: 18px;
-    border: none;
-    cursor: pointer;
-    z-index: 10;
-}
+.text-icon { right: 15px; }
+.repeat-icon { right: 105px; }
+.history-icon { left: 15px; }
+.voice-icon { right: 60px; }
+.settings-icon { left: 105px; }
+.clients-icon { left: 60px; }
 
-.history-icon {
-    position: absolute;
-    bottom: calc(100% + 5px);
-    left: 15px;
-    background: none;
-    color: white;
-    font-size: 18px;
-    border: none;
-    cursor: pointer;
-    z-index: 10;
-}
+.voice-icon:active { color: lightblue; }
 
 .bottom-container {
     position: relative;
@@ -149,16 +109,12 @@ body {
     font-size: 18px;
     background: rgba(0, 0, 0, 0.5);
     border-radius: 10px;
-    white-space: normal; /* Allow multi-line text */
-    word-break: break-word; /* Force long strings to break */
+    white-space: normal;
+    word-break: break-word;
 }
 
-.fixed-bottom::-webkit-scrollbar {
+.fixed-bottom::-webkit-scrollbar, #historyList::-webkit-scrollbar {
     width: 6px;
-}
-
-#historyList::-webkit-scrollbar {
-    width: 10px;
 }
 
 .fixed-bottom::-webkit-scrollbar-thumb, #historyList::-webkit-scrollbar-thumb {
@@ -170,35 +126,7 @@ body {
     background: transparent;
 }
 
-.voice-icon {
-    position: absolute;
-    bottom: calc(100% + 5px);
-    right: 60px;
-    background: none;
-    color: white;
-    font-size: 18px;
-    border: none;
-    cursor: pointer;
-    z-index: 10;
-}
-
-.voice-icon:active {
-    color: lightblue;
-}
-
-.settings-icon {
-    position: absolute;
-    bottom: calc(100% + 5px);
-    left: 105px;
-    background: none;
-    color: white;
-    font-size: 18px;
-    border: none;
-    cursor: pointer;
-    z-index: 10;
-}
-
-#settingsModal {
+#settingsModal, #clientsModal, #confirmationModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -311,32 +239,6 @@ input:checked + .slider:before {
     background: rgba(255, 255, 255, 0.5);
 }
 
-.clients-icon {
-    position: absolute;
-    bottom: calc(100% + 5px);
-    left: 60px;
-    background: none;
-    color: white;
-    font-size: 18px;
-    border: none;
-    cursor: pointer;
-    z-index: 10;
-}
-
-#clientsModal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(8px);
-    z-index: 2000;
-}
-
 #clientsList {
     max-height: 200px;
     overflow-y: auto;
@@ -361,20 +263,6 @@ input:checked + .slider:before {
     padding: 5px;
     border-radius: 5px;
     cursor: pointer;
-}
-
-#confirmationModal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(8px);
-    z-index: 2000;
 }
 
 #confirmationModal .modal-container {
@@ -527,10 +415,6 @@ canvas {
     box-sizing: border-box;
 }
 
-#searchInput::placeholder {
-    color: rgba(255, 255, 255, 0.7);
-}
-
 #searchButton {
     position: absolute;
     top: 50%;
@@ -575,6 +459,13 @@ canvas {
 
 #closeSidebar:hover {
     color: red; 
+}
+
+#searchButton, #closeSidebar, #archiveButton, #deleteButton, #confirmAction, #cancelAction, .modal-buttons {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .history-actions {

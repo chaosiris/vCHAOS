@@ -41,6 +41,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
 
     document.addEventListener("keydown", function (event) {
+        if (event.ctrlKey || event.metaKey) return;
+
         if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
             return;
         }
