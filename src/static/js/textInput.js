@@ -6,38 +6,38 @@ document.addEventListener("DOMContentLoaded", function () {
     const userInput = document.getElementById("userInput");
     const sendButton = document.getElementById("sendButton");
     const repeatButton = document.getElementById("repeatButton");
+    const voiceButton = document.getElementById("voiceButton");
     inputContainer.classList.add("input-container", "hidden");
     inputContainer.appendChild(userInput);
     inputContainer.appendChild(sendButton);
     fixedBottom.appendChild(inputContainer);
 
-    let textMode = false;
+    window.textMode = false;
     let lastInputText = "";
 
     textButton.addEventListener("click", function () {
-        textMode = !textMode;
+        window.textMode = !window.textMode;
 
-        if (textMode) {
+        if (window.textMode) {
             textDisplay.classList.add("hidden");
+            voiceButton.classList.add("hidden");
             inputContainer.classList.remove("hidden");
             userInput.classList.remove("hidden");
             sendButton.classList.remove("hidden");
             userInput.focus();
 
-            if (window.appSettings["enable-text-repeat"]) {
-                repeatButton.classList.remove("hidden");
-                repeatButton.onclick = function () {
-                    userInput.value = lastInputText;
-                };
+            if (window.appSettings["enable-prompt-repeat"]) {
+                updateRepeatButton();
             }
         } else {
             textDisplay.classList.remove("hidden");
+            voiceButton.classList.remove("hidden");
             inputContainer.classList.add("hidden");
             userInput.classList.add("hidden");
             sendButton.classList.add("hidden");
 
-            if (window.appSettings["enable-text-repeat"]) {
-                repeatButton.classList.add("hidden");
+            if (window.appSettings["enable-prompt-repeat"]) {
+                updateRepeatButton();
             }
         }
     });
@@ -49,11 +49,12 @@ document.addEventListener("DOMContentLoaded", function () {
             userInput.value = "";
             inputContainer.classList.add("hidden");
             textDisplay.classList.remove("hidden");
-            if (window.appSettings["enable-text-repeat"]) {
+            voiceButton.classList.remove("hidden");
+            if (window.appSettings["enable-prompt-repeat"]) {
                 lastInputText = inputText;
-                repeatButton.classList.add("hidden");
+                updateRepeatButton();
             }
-            textMode = false;
+            window.textMode = false;
         }
     });
 
@@ -133,29 +134,39 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function updateStatus(state) {
-        if (state === "listening") {
-            responseStatus.textContent = "Listening to Mic";
-            responseStatus.className = "status-listening";
-        } else if (state === "transcribing") {
-            responseStatus.textContent = "Transcribing Audio";
-            responseStatus.className = "status-transcribing";
-        } else if (state === "waiting") {
-            responseStatus.textContent = "Waiting for Response";
-            responseStatus.className = "status-waiting";
-        } else if (state === "received") {
-            responseStatus.textContent = "Response Received";
-            responseStatus.className = "status-received";
-        } else if (state === "error") {
-            responseStatus.textContent = "Error";
-            responseStatus.className = "status-error";
-        } else if (state === "timeout") {
-            responseStatus.textContent = "Timed Out";
-            responseStatus.className = "status-timeout";
-        } else {
-            responseStatus.textContent = "Idle";
-            responseStatus.className = "status-idle";
+    function updateRepeatButton() {
+        if (!window.appSettings["enable-prompt-repeat"]) {
+            repeatButton.classList.add("hidden");
+            return;
         }
+
+        if (window.textMode && lastInputText) {
+            repeatButton.classList.remove("hidden");
+            repeatButton.onclick = () => {
+                userInput.value = lastInputText;
+            };
+        } else if (!window.textMode && window.lastInputVoice) {
+            repeatButton.classList.remove("hidden");
+            repeatButton.onclick = () => {
+                sendToBackend(window.lastInputVoice);
+            };
+        } else {
+            repeatButton.classList.add("hidden");
+        }
+    }
+
+    function updateStatus(state) {
+        const statusMap = {
+            "listening": "Listening to Mic",
+            "transcribing": "Transcribing Audio",
+            "waiting": "Waiting for Response",
+            "received": "Response Received",
+            "error": "Error",
+            "timeout": "Timed Out",
+            "idle": "Idle"
+        };
+        responseStatus.textContent = statusMap[state] || "Idle";
+        responseStatus.className = `status-${state}`;
     }
 
     window.updateStatus = updateStatus;

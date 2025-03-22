@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let audioChunks = [];
     let isRecording = false;
     let stream = null; 
+    window.lastInputVoice = "";
 
     voiceButton.addEventListener("pointerdown", (e) => {
         e.preventDefault();
@@ -90,6 +91,14 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             await window.sendToBackend(result.transcription);
+
+            if (window.appSettings["enable-prompt-repeat"]) {
+                window.lastInputVoice = result.transcription;
+                repeatButton.classList.remove("hidden");
+                repeatButton.onclick = () => {
+                    window.sendToBackend(lastInputVoice);
+                };
+            }
         } catch {
             updateStatus("error");
         }

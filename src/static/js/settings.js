@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const cancelSettings = document.getElementById("cancelSettings");
 
     const showSentPrompts = document.getElementById("showSentPrompts");
-    const enableTextRepeat = document.getElementById("enableTextRepeat");
+    const enablePromptRepeat = document.getElementById("enablePromptRepeat");
     const enableMouthScaling = document.getElementById("enableMouthScaling");
     const saveChatHistory = document.getElementById("saveChatHistory");
     const adaptiveBg = document.getElementById("adaptiveBg");
@@ -32,7 +32,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     settingsButton.addEventListener("click", async function () {
         showSentPrompts.checked = window.appSettings["show-sent-prompts"];
-        enableTextRepeat.checked = window.appSettings["enable-text-repeat"];
+        enablePromptRepeat.checked = window.appSettings["enable-prompt-repeat"];
         enableMouthScaling.checked = window.appSettings["enable-mouth-scaling"];
         saveChatHistory.checked = window.appSettings["save-chat-history"];
         adaptiveBg.checked = window.appSettings["adaptive-background"];
@@ -85,7 +85,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         const newSettings = {
             "frontend": {
                 "show-sent-prompts": showSentPrompts.checked,
-                "enable-text-repeat": enableTextRepeat.checked,
+                "enable-prompt-repeat": enablePromptRepeat.checked,
                 "enable-mouth-scaling": enableMouthScaling.checked,
                 "save-chat-history": saveChatHistory.checked,
                 "adaptive-background": adaptiveBg.checked,
@@ -104,6 +104,12 @@ document.addEventListener("DOMContentLoaded", async function () {
             if (!response.ok) throw new Error("Failed to update settings");
 
             await loadSettings();
+
+            const repeatButton = document.getElementById("repeatButton");
+            if (!window.appSettings["enable-prompt-repeat"] && repeatButton && !repeatButton.classList.contains("hidden")) {
+                repeatButton.classList.add("hidden");
+            }
+            
             settingsModal.classList.add("hidden");
             if (initModelPath !== modelInput.value) {
                 // Refresh page to reload Live2D model if path changed
