@@ -50,11 +50,11 @@ document.addEventListener("DOMContentLoaded", function () {
             inputContainer.classList.add("hidden");
             textDisplay.classList.remove("hidden");
             voiceButton.classList.remove("hidden");
+            window.textMode = false;
             if (window.appSettings["enable-prompt-repeat"]) {
                 lastInputText = inputText;
                 updateRepeatButton();
             }
-            window.textMode = false;
         }
     });
 
