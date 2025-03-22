@@ -201,7 +201,7 @@ async def send_prompt(request: Request, _: None = Depends(validate_connection)):
         return {"success": False, "error": f"Application error: {str(e)}"}
 
 @app.post("/api/send_voice")
-async def transcribe_and_forward(audio: UploadFile = File(...)):
+async def transcribe_and_forward(audio: UploadFile = File(...), _: None = Depends(validate_connection)):
     try:
         input_bytes = await audio.read()
 
@@ -255,11 +255,11 @@ async def transcribe_and_forward(audio: UploadFile = File(...)):
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 @app.post("/api/archive_chat_history")
-async def archive_chat_history():
+async def archive_chat_history(_: None = Depends(validate_connection)):
     return await process_chat_history("archive")
 
 @app.delete("/api/delete_chat_history")
-async def delete_chat_history():
+async def delete_chat_history(_: None = Depends(validate_connection)):
     return await process_chat_history("delete")
 
 @app.websocket("/ws")
