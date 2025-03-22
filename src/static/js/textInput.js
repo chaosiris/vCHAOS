@@ -84,9 +84,6 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
     
-        const textInput = document.getElementById("userInput");
-        const sendButton = document.getElementById("sendButton");
-    
         if (event.key === "i") {
             event.preventDefault();
             textButton.click();
@@ -134,10 +131,16 @@ document.addEventListener("DOMContentLoaded", function () {
     
             updateStatus("error");
         }
-    }    
+    }
 
     function updateStatus(state) {
-        if (state === "waiting") {
+        if (state === "listening") {
+            responseStatus.textContent = "Listening to Mic";
+            responseStatus.className = "status-listening";
+        } else if (state === "transcribing") {
+            responseStatus.textContent = "Transcribing Audio";
+            responseStatus.className = "status-transcribing";
+        } else if (state === "waiting") {
             responseStatus.textContent = "Waiting for Response";
             responseStatus.className = "status-waiting";
         } else if (state === "received") {
@@ -156,4 +159,5 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     window.updateStatus = updateStatus;
+    window.sendToBackend = sendToBackend;
 });

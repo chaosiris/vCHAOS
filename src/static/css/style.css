@@ -47,7 +47,9 @@ html, body {
 
 .connected { background-color: green; font-weight: bold; }
 .disconnected { background-color: red; font-weight: bold; }
-.status-idle { background-color: darkslategray; }
+.status-idle { background-color: #2f4f4f; }
+.status-listening { background-color: darkcyan; }
+.status-transcribing { background-color: rgb(0, 149, 151); }
 .status-waiting { background-color: darkorange; }
 .status-received { background-color: darkgreen; }
 .status-error { background-color: darkred; }
@@ -59,7 +61,7 @@ html, body {
     width: 100%;
 }
 
-.text-icon, .repeat-icon, .history-icon, .voice-icon, .settings-icon, .clients-icon {
+.text-icon, .repeat-icon, .history-icon, .preset-icon, .settings-icon, .clients-icon {
     position: absolute;
     bottom: calc(100% + 5px);
     background: none;
@@ -74,14 +76,40 @@ html, body {
     -ms-user-select: none;
 }
 
-.text-icon { right: 15px; }
-.repeat-icon { right: 105px; }
-.history-icon { left: 15px; }
-.voice-icon { right: 60px; }
-.settings-icon { left: 105px; }
-.clients-icon { left: 60px; }
+.text-icon { right: 5px; }
+.preset-icon { right: 50px; }
+.repeat-icon { right: 95px; }
+.history-icon { left: 5px; }
+.clients-icon { left: 50px; }
+.settings-icon { left: 95px; }
 
-.voice-icon:active { color: lightblue; }
+.voice-box {
+    position: absolute;
+    bottom: calc(100% + 5px);
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: 1px solid black;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 4px;
+    cursor: pointer;
+    z-index: 10;
+    user-select: none;
+    touch-action: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    white-space: nowrap;
+}
+
+.voice-box:active {
+    background-color: darkslategray;
+    color: white;
+}
 
 .bottom-container {
     position: relative;
@@ -515,6 +543,7 @@ canvas {
     .sidebar {
         top: calc(10px + 100px);
         width: 256px;
+        transition: transform 0.3s ease-in-out;
     }
 
     #historyList {

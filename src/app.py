@@ -7,6 +7,10 @@ import uvicorn
 import httpx
 import logging
 import shutil
+import subprocess
+from wyoming.client import AsyncTcpClient
+from wyoming.audio import AudioChunk, AudioStop
+from wyoming.asr import Transcribe, Transcript
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Query, UploadFile, File, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -195,6 +199,60 @@ async def send_prompt(request: Request, _: None = Depends(validate_connection)):
         return {"success": False, "error": f"HTTP Request error: {str(e)}"}
     except Exception as e:
         return {"success": False, "error": f"Application error: {str(e)}"}
+
+@app.post("/api/send_voice")
+async def transcribe_and_forward(audio: UploadFile = File(...)):
+    try:
+        input_bytes = await audio.read()
+
+        ffmpeg_process = await asyncio.create_subprocess_exec(
+            "ffmpeg", "-i", "pipe:0",
+            "-f", "wav", "-ar", "16000", "-ac", "1", "-sample_fmt", "s16",
+            "pipe:1",
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL
+        )
+
+        stdout, _ = await ffmpeg_process.communicate(input=input_bytes)
+
+        if ffmpeg_process.returncode != 0:
+            raise RuntimeError("FFmpeg failed to convert audio")
+
+        # Send to Faster-Whisper backend // TODO: Make the Whisper host and port configurable in settings.yaml
+        async with AsyncTcpClient("localhost", 10300) as client:
+            await client.write_event(Transcribe(language="en").event())
+
+            chunk_size = 4096
+            offset = 0
+            while offset < len(stdout):
+                chunk = AudioChunk(
+                    rate=16000,
+                    width=2,
+                    channels=1,
+                    audio=stdout[offset:offset+chunk_size]
+                )
+                await client.write_event(chunk.event())
+                offset += chunk_size
+
+            await client.write_event(AudioStop().event())
+
+            while True:
+                event = await client.read_event()
+                if event is None:
+                    raise RuntimeError("No response from STT server")
+
+                transcript = Transcript.from_event(event)
+                if transcript:
+                    text = transcript.text
+                    break
+
+        return {"success": True, "transcription": text}
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 @app.post("/api/archive_chat_history")
 async def archive_chat_history():
