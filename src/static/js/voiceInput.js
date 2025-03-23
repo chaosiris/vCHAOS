@@ -3,13 +3,13 @@
         await new Promise(resolve => setTimeout(resolve, 10)); // Ensure settings are loaded first
     }
 
-    if (!window.appSettings["enable-voice-input"]) {
-        const voiceButton = document.getElementById("voiceButton");
-        if (voiceButton) voiceButton.style.display = "none";
+    const voiceButton = document.getElementById("voiceButton");
+    if (window.appSettings["enable-voice-input"]) {
+        if (voiceButton) voiceButton.style.display = "";
+    } else {
         return;
     }
 
-    const voiceButton = document.getElementById("voiceButton");
     let mediaRecorder;
     let audioChunks = [];
     let isRecording = false;
