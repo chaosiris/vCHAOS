@@ -47,6 +47,8 @@ HOST = settings.get("backend", {}).get("app", {}).get("host", "0.0.0.0")
 PORT = settings.get("backend", {}).get("app", {}).get("port", 11405)
 PROTOCOL = settings.get("backend", {}).get("app", {}).get("protocol", "http")
 LOG_LEVEL = settings.get("backend", {}).get("logging", {}).get("level", "ERROR").upper()
+WHISPER_HOST = settings.get("backend", {}).get("urls", {}).get("whisper_host", "127.0.0.1")
+WHISPER_PORT = settings.get("backend", {}).get("urls", {}).get("whisper_port", 10300)
 SAVE_CHAT_HISTORY = bool(settings.get("frontend", {}).get("save-chat-history", True))
 TIMEOUT_DURATION = settings.get("frontend", {}).get("timeout", 180)
 
@@ -220,8 +222,8 @@ async def transcribe_and_forward(audio: UploadFile = File(...), _: None = Depend
         if ffmpeg_process.returncode != 0:
             raise RuntimeError("FFmpeg failed to convert audio")
 
-        # Send to Faster-Whisper backend // TODO: Make the Whisper host and port configurable in settings.yaml
-        async with AsyncTcpClient("localhost", 10300) as client:
+        # Send to Faster-Whisper backend
+        async with AsyncTcpClient(WHISPER_HOST, WHISPER_PORT) as client:
             await client.write_event(Transcribe(language="en").event())
 
             chunk_size = 4096
@@ -314,6 +316,10 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.get("/api/clients")
 async def get_connected_clients(_: None = Depends(validate_connection)):
     return JSONResponse({"clients": [{"ip": ip} for _, ip in connected_clients]})
+
+@app.get("/api/client_count")
+async def get_client_count():
+    return JSONResponse({"count": len(connected_clients)})
 
 @app.post("/api/disconnect_client")
 async def disconnect_client(request: Request, _: None = Depends(validate_connection)):

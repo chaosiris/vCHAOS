@@ -6,6 +6,8 @@ import math
 import os
 import wave
 import shutil
+import http.client
+import ssl
 from typing import Any, Dict, Optional
 
 from wyoming.audio import AudioChunk, AudioStart, AudioStop
@@ -17,6 +19,76 @@ from wyoming.tts import Synthesize
 from .process import PiperProcessManager
 
 _LOGGER = logging.getLogger(__name__)
+_cached_settings = None
+_last_mtime = None
+
+def load_backend_app_settings(filepath="/settings.yaml"):
+    global _cached_settings, _last_mtime
+
+    try:
+        mtime = os.path.getmtime(filepath)
+        if _cached_settings is not None and _last_mtime == mtime:
+            return _cached_settings
+
+        result = {
+            "host": "host.docker.internal",
+            "port": 11405,
+            "protocol": "http",
+            "multicast": False
+        }
+
+        with open(filepath, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        inside_backend = False
+        inside_app = False
+        indent_level = None
+
+        for line in lines:
+            if not line.strip() or line.strip().startswith("#"):
+                continue
+
+            if line.strip().startswith("backend:"):
+                inside_backend = True
+                continue
+
+            if inside_backend and line.strip().startswith("app:"):
+                inside_app = True
+                indent_level = len(line) - len(line.lstrip())
+                continue
+
+            if inside_app:
+                if len(line) - len(line.lstrip()) <= indent_level:
+                    break
+
+                key, _, value = line.partition(":")
+                key = key.strip()
+                value = value.split("#", 1)[0].strip().strip('"').strip("'")
+
+                if key == "host":
+                    result["host"] = value
+                elif key == "port":
+                    try:
+                        result["port"] = int(value)
+                    except ValueError:
+                        pass
+                elif key == "protocol":
+                    result["protocol"] = value.lower()
+                elif key == "multicast":
+                    result["multicast"] = value.lower() == "true"
+
+        _cached_settings = result
+        _last_mtime = mtime
+        return result
+
+    except Exception as e:
+        print(f"Error reading settings.yaml: {e}")
+        return {
+            "host": "host.docker.internal",
+            "port": 11405,
+            "protocol": "http",
+            "multicast": False
+        }
 
 class PiperEventHandler(AsyncEventHandler):
     def __init__(
@@ -80,29 +152,61 @@ class PiperEventHandler(AsyncEventHandler):
             output_path = (await piper_proc.proc.stdout.readline()).decode().strip()
             _LOGGER.debug(output_path)
 
-        # Define output directory
-        destination_dir = "/output"
-        text_output_path = os.path.join(destination_dir, os.path.basename(output_path).replace(".wav", ".txt"))
+        client_count = 0
+        backend_settings = load_backend_app_settings()
+        protocol = backend_settings["protocol"]
+        host = backend_settings["host"]
+        if (host == "0.0.0.0" or host == "127.0.0.1"):
+            host = "host.docker.internal"
+        port = backend_settings["port"]
 
-        with open(text_output_path, "w", encoding="utf-8") as text_file:
-            text_file.write(text)
-            _LOGGER.info(f"Saved Ollama output text to {text_output_path}")
+        try:
+            if protocol == "https":
+                context = ssl._create_unverified_context()
+                conn = http.client.HTTPSConnection(host, port, context=context)
+            else:
+                conn = http.client.HTTPConnection(host, port)
 
-        destination_path = os.path.join(destination_dir, os.path.basename(output_path))
-        os.makedirs(destination_dir, exist_ok=True)
-        shutil.move(output_path, destination_path)
-        _LOGGER.info(f"Moved .wav file to {destination_path}")
+            conn.request("GET", "/api/client_count")
+            response = conn.getresponse()
 
-        # Notify FastAPI backend
-        self.notify_backend(destination_path)
+            if response.status == 200:
+                data = response.read()
+                result = json.loads(data.decode())
+                client_count = result.get("count", 0)
 
-        # Generate an empty placeholder `.wav` file
-        with open(output_path, "wb") as empty_wav:
-            empty_wav.write(
-                b"RIFF" b"\x2C\x00\x00\x00" b"WAVE" b"fmt " b"\x10\x00\x00\x00"
-                b"\x01\x00" b"\x01\x00" b"\x22\x56\x00\x00" b"\x44\xAC\x00\x00"
-                b"\x02\x00" b"\x10\x00" b"data" b"\x00\x00\x00\x00"
-            )
+        except Exception as e:
+            _LOGGER.warning(f"Unable to contact backend: {e}")
+
+        if client_count != 0:
+            # Define output directory
+            destination_dir = "/output"
+            text_output_path = os.path.join(destination_dir, os.path.basename(output_path).replace(".wav", ".txt"))
+
+            with open(text_output_path, "w", encoding="utf-8") as text_file:
+                text_file.write(text)
+                _LOGGER.info(f"Saved Ollama output text to {text_output_path}")
+
+            destination_path = os.path.join(destination_dir, os.path.basename(output_path))
+            os.makedirs(destination_dir, exist_ok=True)
+            if backend_settings["multicast"]:
+                shutil.copy(output_path, destination_path)
+                _LOGGER.info(f"Copied .wav file to {destination_path}")
+            else:
+                shutil.move(output_path, destination_path)
+                _LOGGER.info(f"Moved .wav file to {destination_path}")
+
+            # Notify FastAPI backend
+            self.notify_backend(destination_path)
+
+            # Generate an empty placeholder `.wav` file
+            if not backend_settings["multicast"]:
+                with open(output_path, "wb") as empty_wav:
+                    empty_wav.write(
+                        b"RIFF" b"\x2C\x00\x00\x00" b"WAVE" b"fmt " b"\x10\x00\x00\x00"
+                        b"\x01\x00" b"\x01\x00" b"\x22\x56\x00\x00" b"\x44\xAC\x00\x00"
+                        b"\x02\x00" b"\x10\x00" b"data" b"\x00\x00\x00\x00"
+                    )
 
         wav_file: wave.Wave_read = wave.open(output_path, "rb")
         with wav_file:
