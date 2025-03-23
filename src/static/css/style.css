@@ -36,6 +36,9 @@ html, body {
     padding: 10px;
     border: none;
     border-radius: 5px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
     user-select: none;
     pointer-events: none;
     touch-action: manipulation;
@@ -372,12 +375,23 @@ input:checked + .slider:before {
     width: 100vw;
     height: 100vh;
     overflow: auto;
+
 }
 
 canvas {
     position: fixed;
     width: 100%;
     height: 100%;
+}
+
+.canvas-container, canvas {
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 .sidebar {
@@ -389,13 +403,14 @@ canvas {
     background: rgba(0, 0, 0, 0.8);
     color: white;
     transform: translateX(-100%);
-    transition: transform 0.3s ease-in-out;
+    transition: transform 2s ease-in-out;
     z-index: 1000;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
     overflow: hidden;
+    opacity: 0;
 }
 
 .sidebar h3 {
@@ -421,6 +436,7 @@ canvas {
 
 .sidebar.show {
     transform: translateX(0);
+    opacity: 1;
 }
 
 .search-container {

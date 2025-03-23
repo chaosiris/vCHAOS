@@ -1,26 +1,66 @@
-document.addEventListener("DOMContentLoaded", function () {
+(async function () {
+    while (!window.appSettings || Object.keys(window.appSettings).length === 0) {
+        await new Promise(resolve => setTimeout(resolve, 10)); // Ensure settings are loaded first
+    }
+
+    if (!window.appSettings["enable-voice-input"]) {
+        const voiceButton = document.getElementById("voiceButton");
+        if (voiceButton) voiceButton.style.display = "none";
+        return;
+    }
+
     const voiceButton = document.getElementById("voiceButton");
     let mediaRecorder;
     let audioChunks = [];
     let isRecording = false;
-    let stream = null; 
+    let stream = null;
     window.lastInputVoice = "";
 
     voiceButton.addEventListener("pointerdown", (e) => {
         e.preventDefault();
-    
+
         requestAnimationFrame(() => {
             startRecording();
-    
+
             const stop = () => {
                 stopRecording();
                 window.removeEventListener("pointerup", stop);
                 window.removeEventListener("pointercancel", stop);
             };
-    
+
             window.addEventListener("pointerup", stop);
             window.addEventListener("pointercancel", stop);
         });
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.repeat || event.ctrlKey || event.metaKey || isRecording) return;
+        if (event.key !== " " && event.code !== "Space") return;
+    
+        if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") return;
+    
+        const historySidebar = document.getElementById("historySidebar");
+        const clientsModal = document.getElementById("clientsModal");
+        const settingsModal = document.getElementById("settingsModal");
+        const confirmationModal = document.getElementById("confirmationModal");
+    
+        if (
+            (historySidebar && !historySidebar.classList.contains("hidden")) ||
+            (clientsModal && !clientsModal.classList.contains("hidden")) ||
+            (settingsModal && !settingsModal.classList.contains("hidden")) ||
+            (confirmationModal && !confirmationModal.classList.contains("hidden"))
+        ) {
+            return;
+        }
+    
+        event.preventDefault();
+        startRecording();
+    });
+    
+    document.addEventListener("keyup", function (event) {
+        if (event.key === " " || event.code === "Space") {
+            stopRecording();
+        }
     });
 
     async function startRecording() {
@@ -69,22 +109,20 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     async function sendAudioToBackend(audioBlob) {
-        if (audioBlob.size === 0) {
-            return;
-        }
-    
+        if (audioBlob.size === 0) return;
+
         const formData = new FormData();
         formData.append("audio", audioBlob, "voice_input.wav");
         updateStatus("transcribing");
-    
+
         try {
             const response = await fetch("/api/send_voice", {
                 method: "POST",
                 body: formData,
             });
-    
+
             const result = await response.json();
-    
+
             if (!response.ok || !result.success) {
                 updateStatus("error");
                 return;
@@ -94,13 +132,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (window.appSettings["enable-prompt-repeat"]) {
                 window.lastInputVoice = result.transcription;
-                repeatButton.classList.remove("hidden");
-                repeatButton.onclick = () => {
-                    window.sendToBackend(lastInputVoice);
-                };
+                const repeatButton = document.getElementById("repeatButton");
+                if (repeatButton) {
+                    repeatButton.classList.remove("hidden");
+                    repeatButton.onclick = () => {
+                        window.sendToBackend(window.lastInputVoice);
+                    };
+                }
             }
         } catch {
             updateStatus("error");
         }
     }
-});
+})();

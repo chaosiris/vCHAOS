@@ -98,6 +98,7 @@ document.addEventListener("DOMContentLoaded", function () {
             textPrefix.style.color = "lightgreen";
             document.getElementById("textOutput").textContent = inputText;
         }
+        updateStatus("waiting");
 
         const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error("Request timed out after 180 seconds")), window.appSettings["timeout"] * 1000)
@@ -113,7 +114,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 timeoutPromise // This will reject if the timeout is reached first
             ]);
     
-            updateStatus("waiting");
             const result = await response.json();
     
             if (!response.ok || !result.success) {

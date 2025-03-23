@@ -240,4 +240,55 @@ document.addEventListener("DOMContentLoaded", function () {
             modal.classList.add("hidden");
         };
     }
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+    const minSwipeDistance = 50;
+    
+    document.addEventListener("touchstart", function (event) {
+        const touch = event.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        touchEndX = touchStartX;
+        touchEndY = touchStartY;
+    }, { passive: true });
+    
+    document.addEventListener("touchmove", function (event) {
+        const deltaX = event.touches[0].clientX - touchStartX;
+        const deltaY = Math.abs(event.touches[0].clientY - touchStartY);
+    
+        if (Math.abs(deltaX) > deltaY) {
+            event.preventDefault();
+        }
+    
+        touchEndX = event.touches[0].clientX;
+        touchEndY = event.touches[0].clientY;
+    }, { passive: false });
+    
+    document.addEventListener("touchend", function () {
+        const swipeDistance = touchEndX - touchStartX;
+        const sidebarOpen = historySidebar.classList.contains("show");
+    
+        if (Math.abs(swipeDistance) < minSwipeDistance) return;
+    
+        const sidebarRect = historySidebar.getBoundingClientRect();
+        const touchEndedInsideSidebar =
+            sidebarOpen &&
+            touchEndX >= sidebarRect.left &&
+            touchEndX <= sidebarRect.right &&
+            touchEndY >= sidebarRect.top &&
+            touchEndY <= sidebarRect.bottom;
+    
+        if (touchEndedInsideSidebar) return;
+    
+        if (swipeDistance > minSwipeDistance && touchStartX < 50 && !sidebarOpen) {
+            historySidebar.classList.remove("hidden");
+            historySidebar.classList.add("show");
+            loadChatHistory();
+        } else if (swipeDistance < -minSwipeDistance && sidebarOpen) {
+            closeSidebarPanel();
+        }
+    });
 });

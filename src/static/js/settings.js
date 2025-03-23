@@ -7,12 +7,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     const showSentPrompts = document.getElementById("showSentPrompts");
     const enablePromptRepeat = document.getElementById("enablePromptRepeat");
     const enableMouthScaling = document.getElementById("enableMouthScaling");
+    const enableVoiceInput = document.getElementById("enableVoiceInput");
     const saveChatHistory = document.getElementById("saveChatHistory");
     const adaptiveBg = document.getElementById("adaptiveBg");
     const timeoutInput = document.getElementById("timeoutInput");
     const modelInput = document.getElementById("modelInput");
 
     initModelPath = "";
+    initVoiceInput = "";
     window.appSettings = {};
     await loadSettings();
 
@@ -34,11 +36,13 @@ document.addEventListener("DOMContentLoaded", async function () {
         showSentPrompts.checked = window.appSettings["show-sent-prompts"];
         enablePromptRepeat.checked = window.appSettings["enable-prompt-repeat"];
         enableMouthScaling.checked = window.appSettings["enable-mouth-scaling"];
+        enableVoiceInput.checked = window.appSettings["enable-voice-input"];
         saveChatHistory.checked = window.appSettings["save-chat-history"];
         adaptiveBg.checked = window.appSettings["adaptive-background"];
         timeoutInput.value = window.appSettings["timeout"];
         modelInput.value = window.appSettings["model_path"];
         initModelPath = modelInput.value;
+        initVoiceInput = enableVoiceInput.value;
         settingsModal.classList.remove("hidden");
     });
 
@@ -87,6 +91,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 "show-sent-prompts": showSentPrompts.checked,
                 "enable-prompt-repeat": enablePromptRepeat.checked,
                 "enable-mouth-scaling": enableMouthScaling.checked,
+                "enable-voice-input": enableVoiceInput.checked,
                 "save-chat-history": saveChatHistory.checked,
                 "adaptive-background": adaptiveBg.checked,
                 "timeout": parseInt(timeoutInput.value),
@@ -105,11 +110,26 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             await loadSettings();
 
+            if (initVoiceInput !== enableVoiceInput.checked) {
+                if (!enableVoiceInput.checked) {
+                    // Hide and remove voice button and event listeners if disabled
+                    const voiceButton = document.getElementById("voiceButton");
+                    if (voiceButton) {
+                        voiceButton.style.display = "none";
+                        voiceButton.replaceWith(voiceButton.cloneNode(true));
+                    }
+                } else {
+                    // Refresh page to re-initialize voiceInput.js
+                    window.location.reload();
+                    return;
+                }
+            }
+
             const repeatButton = document.getElementById("repeatButton");
             if (!window.appSettings["enable-prompt-repeat"] && repeatButton && !repeatButton.classList.contains("hidden")) {
                 repeatButton.classList.add("hidden");
             }
-            
+
             settingsModal.classList.add("hidden");
             if (initModelPath !== modelInput.value) {
                 // Refresh page to reload Live2D model if path changed
