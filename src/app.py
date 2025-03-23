@@ -8,6 +8,7 @@ import httpx
 import logging
 import shutil
 import subprocess
+import socket
 from wyoming.client import AsyncTcpClient
 from wyoming.audio import AudioChunk, AudioStop
 from wyoming.asr import Transcribe, Transcript
@@ -408,7 +409,7 @@ async def send_to_clients(message: str):
 
         try:
             await websocket.send_text(message)
-        except WebSocketDisconnect:
+        except (WebSocketDisconnect, ConnectionResetError):
             disconnected_clients.add(client_tuple)
         except Exception as e:
             logger.error(f"Error sending WebSocket message: {e}")
@@ -416,9 +417,31 @@ async def send_to_clients(message: str):
 
     connected_clients.difference_update(disconnected_clients)
 
+# Suppress asyncio ConnectionResetError
+def suppress_asyncio_error():
+    try:
+        # Import only when needed
+        import asyncio.proactor_events
+
+        orig = asyncio.proactor_events._ProactorBasePipeTransport._call_connection_lost
+
+        def safe_shutdown(self, exc):
+            try:
+                sock = getattr(self, "_sock", None)
+                if sock and hasattr(sock, "shutdown"):
+                    sock.shutdown(socket.SHUT_RDWR)
+            except (OSError, ConnectionResetError):
+                pass
+            return orig(self, exc)
+
+        asyncio.proactor_events._ProactorBasePipeTransport._call_connection_lost = safe_shutdown
+    except Exception as e:
+        print("Error: Failed to patch asyncio ConnectionResetError due to", e)
+
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(monitor_notifications())
+    suppress_asyncio_error()
 
 if __name__ == "__main__":
     if PROTOCOL == "https":
