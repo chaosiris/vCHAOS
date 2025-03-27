@@ -18,7 +18,7 @@ html, body {
 .top-left-container, .top-right-container {
     position: absolute;
     top: 10px;
-    z-index: 1;
+    z-index: 1000;
 }
 
 .top-left-container {
@@ -119,7 +119,7 @@ html, body {
     bottom: 0;
     left: 0;
     width: 100%;
-    max-height: 168px;
+    max-height: 188px;
     overflow: hidden;
     background: rgba(0, 0, 0, 0.5);
     color: white;
@@ -132,7 +132,7 @@ html, body {
 }
 
 .fixed-bottom {
-    max-height: 140px;
+    max-height: 160px;
     overflow-y: auto;
     width: 100%;
     padding: 0 10px;
@@ -144,20 +144,26 @@ html, body {
     word-break: break-word;
 }
 
-.fixed-bottom::-webkit-scrollbar, #historyList::-webkit-scrollbar {
+.fixed-bottom::-webkit-scrollbar, #historyList::-webkit-scrollbar, #presetList::-webkit-scrollbar {
     width: 6px;
 }
 
-.fixed-bottom::-webkit-scrollbar-thumb, #historyList::-webkit-scrollbar-thumb {
+.fixed-bottom::-webkit-scrollbar-thumb, #historyList::-webkit-scrollbar-thumb, #presetList::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 10px;
 }
 
-.fixed-bottom::-webkit-scrollbar-track, #historyList::-webkit-scrollbar-track {
+.fixed-bottom::-webkit-scrollbar-track, #historyList::-webkit-scrollbar-track, #presetList::-webkit-scrollbar-track {
     background: transparent;
 }
 
-#settingsModal, #clientsModal, #confirmationModal {
+#textDisplay {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
+
+#settingsModal, #clientsModal, #confirmationModal, #presetModal {
     position: fixed;
     top: 0;
     left: 0;
@@ -396,21 +402,31 @@ canvas {
 
 .sidebar {
     position: fixed;
-    left: 0;
-    top: calc(10px + 50px);
+    top: calc(10px + 55px);
     width: 320px;
     bottom: 188px;
     background: rgba(0, 0, 0, 0.8);
     color: white;
-    transform: translateX(-100%);
-    transition: transform 2s ease-in-out;
+    transition: transform 0.3s ease-in-out;
     z-index: 1000;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    overflow: hidden;
-    opacity: 0;
+}
+
+.sidebar.left {
+    left: 0;
+    transform: translateX(-100%);
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.sidebar.right {
+    right: 0;
+    transform: translateX(100%);
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
 }
 
 .sidebar h3 {
@@ -436,7 +452,6 @@ canvas {
 
 .sidebar.show {
     transform: translateX(0);
-    opacity: 1;
 }
 
 .search-container {
@@ -479,14 +494,78 @@ canvas {
     color: lightgray;
 }
 
-#historyList {
+#historyList, #presetList {
     flex-grow: 1;
     overflow-y: auto;
     padding: 0px 10px 0px 16px;
     margin-bottom: 10px;
 }
 
-#closeSidebar {
+.preset-item-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px;
+}
+
+.preset-label, .history-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.preset-checkbox, .history-checkbox {
+    transform: scale(1.3);
+    cursor: pointer;
+}
+
+.preset-text {
+    flex-grow: 1;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.preset-modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+#presetModal input,
+#presetModal textarea {
+    padding: 8px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 0 auto;
+}
+
+#presetModal label {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 0 auto;
+}
+
+#presetModal textarea {
+    height: 120px;
+    resize: vertical;
+    max-width: 100%;
+    font-family: inherit;
+}
+
+.preset-modal-actions button {
+    padding: 8px 16px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+#closeHistorySidebar, #closePresetSidebar {
     position: absolute;
     max-width: 46px;
     max-height: 46px;
@@ -501,23 +580,23 @@ canvas {
     transition: color 0.2s ease-in-out;
 }
 
-#closeSidebar:hover {
+#closeHistorySidebar:hover, #closePresetSidebar:hover {
     color: red; 
 }
 
-#searchButton, #closeSidebar, #archiveButton, #deleteButton, #confirmAction, #cancelAction, .modal-buttons {
+#searchButton, #closeHistorySidebar, #closePresetSidebar, #archiveButton, #deleteButton, #removeButton, #confirmAction, #cancelAction, .modal-buttons {
     user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
 }
 
-.history-actions {
+.history-actions, .preset-actions {
     display: flex;
     width: 100%;
 }
 
-#archiveButton, #deleteButton {
+#archiveButton, #modifyButton, #deleteButton, #removeButton {
     flex: 1;
     padding: 10px;
     border: none;
@@ -525,14 +604,6 @@ canvas {
     font-size: 16px;
     font-weight: bold;
     transition: background-color 0.3s ease;
-}
-
-#archiveButton {
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
-}
-
-#deleteButton {
     background-color: rgba(0, 0, 0, 0.8);
     color: white;
 }
@@ -541,11 +612,19 @@ canvas {
     background-color: rgba(255, 255, 255, 0.2);
 }
 
-#deleteButton:hover {
+#modifyButton:hover {
+    background-color: rgba(0, 255, 0, 0.5);
+}
+
+#deleteButton:hover, #removeButton:hover {
     background-color: rgba(255, 0, 0, 0.5);
 }
 
 @media (max-width: 768px) {
+    html, body {
+        overscroll-behavior: none; 
+    }
+    
     .top-left-container {
         flex-direction: column;
         align-items: flex-start;
@@ -562,11 +641,11 @@ canvas {
         transition: transform 0.3s ease-in-out;
     }
 
-    #historyList {
+    #historyList, #presetList {
         padding-right: 16px;
     }
 
-    #closeSidebar {
+    #closeHistorySidebar, #closePresetSidebar {
         left: calc(256px - 46px);
     }
 }
@@ -576,7 +655,7 @@ canvas {
         height: calc(100vh - (10px + 50px) - 80px);
     }
 
-    #historyList {
+    #historyList, #presetList {
         max-height: calc(100vh - (10px + 50px) - 100px);
     }
 }

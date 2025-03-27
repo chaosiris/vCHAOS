@@ -43,12 +43,14 @@
         const clientsModal = document.getElementById("clientsModal");
         const settingsModal = document.getElementById("settingsModal");
         const confirmationModal = document.getElementById("confirmationModal");
+        const presetModal = document.getElementById("presetModal");
     
         if (
             (historySidebar && !historySidebar.classList.contains("hidden")) ||
             (clientsModal && !clientsModal.classList.contains("hidden")) ||
             (settingsModal && !settingsModal.classList.contains("hidden")) ||
-            (confirmationModal && !confirmationModal.classList.contains("hidden"))
+            (confirmationModal && !confirmationModal.classList.contains("hidden")) ||
+            ((presetModal && !presetModal.classList.contains("hidden")))
         ) {
             return;
         }

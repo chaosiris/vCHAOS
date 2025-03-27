@@ -12,7 +12,7 @@ import socket
 from wyoming.client import AsyncTcpClient
 from wyoming.audio import AudioChunk, AudioStop
 from wyoming.asr import Transcribe, Transcript
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Query, UploadFile, File, HTTPException, Depends
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Query, UploadFile, File, HTTPException, Depends, Body
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from ruamel.yaml import YAML
@@ -26,6 +26,7 @@ connected_clients = set()
 pending_deletions = {}  # Track files pending deletion
 client_receipts = {}  # Track which clients have received a given file
 notification_file = "output/new_audio.json"
+preset_file = "presets.json"
 
 # Serve static files
 app.mount("/static", StaticFiles(directory="static", html=True), name="static")
@@ -175,6 +176,105 @@ async def get_chat_history(search: str = Query(default=None, description="Search
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
+@app.post("/api/archive_chat_history")
+async def archive_chat_history(body=Body(default=None), _: None = Depends(validate_connection)):
+    filenames = body.get("filenames") if body else None
+    return await process_chat_history("archive", filenames)
+
+@app.delete("/api/delete_chat_history")
+async def delete_chat_history(body=Body(default=None), _: None = Depends(validate_connection)):
+    filenames = body.get("filenames") if body else None
+    return await process_chat_history("delete", filenames)
+
+@app.get("/api/get_presets")
+async def get_presets(_: None = Depends(validate_connection)):
+    try:
+        if not os.path.exists(preset_file):
+            return JSONResponse([], status_code=200)
+
+        with open(preset_file, "r", encoding="utf-8") as f:
+            presets = json.load(f)
+
+        if not isinstance(presets, list):
+            return JSONResponse([], status_code=200)
+
+        return JSONResponse(presets)
+
+    except json.JSONDecodeError:
+        return JSONResponse({"error": "Invalid JSON format"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/api/save_preset")
+async def save_preset(request: Request, _: None = Depends(validate_connection)):
+    try:
+        data = await request.json()
+        name = data.get("name", "").strip()
+        prompt = data.get("prompt", "").strip()
+
+        if not name or not prompt:
+            raise HTTPException(status_code=400, detail="Both name and prompt are required.")
+
+        if not os.path.exists(preset_file):
+            with open(preset_file, "w", encoding="utf-8") as f:
+                json.dump([], f)
+
+        with open(preset_file, "r", encoding="utf-8") as f:
+            try:
+                presets = json.load(f)
+                if not isinstance(presets, list):
+                    presets = []
+            except json.JSONDecodeError:
+                presets = []
+
+        existing_preset = next((p for p in presets if p["name"] == name), None)
+
+        if existing_preset:
+            existing_preset["prompt"] = prompt
+        else:
+            presets.append({"name": name, "prompt": prompt})
+
+        with open(preset_file, "w", encoding="utf-8") as f:
+            json.dump(presets, f, indent=4)
+
+        return {"success": True, "message": "Preset saved successfully"}
+
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/delete_presets")
+async def delete_presets(request: Request, _: None = Depends(validate_connection)):
+    try:
+        data = await request.json()
+        names_to_delete = data.get("names", [])
+
+        if not names_to_delete:
+            raise HTTPException(status_code=400, detail="No preset names provided for deletion.")
+
+        if not os.path.exists(preset_file):
+            return JSONResponse({"success": False, "error": "Preset file not found"}, status_code=404)
+
+        with open(preset_file, "r", encoding="utf-8") as f:
+            try:
+                presets = json.load(f)
+                if not isinstance(presets, list):
+                    presets = []
+            except json.JSONDecodeError:
+                presets = []
+
+        filtered_presets = [p for p in presets if p["name"].lower() not in [n.lower() for n in names_to_delete]]
+
+        if len(filtered_presets) == len(presets):  
+            return JSONResponse({"success": False, "error": "No matching presets found."}, status_code=404)
+
+        with open(preset_file, "w", encoding="utf-8") as f:
+            json.dump(filtered_presets, f, indent=4)
+
+        return {"success": True, "message": f"Deleted {len(names_to_delete)} presets successfully"}
+
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
 @app.post("/api/send_prompt")
 async def send_prompt(request: Request, _: None = Depends(validate_connection)):
     try:
@@ -256,14 +356,6 @@ async def transcribe_and_forward(audio: UploadFile = File(...), _: None = Depend
         import traceback
         traceback.print_exc()
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
-
-@app.post("/api/archive_chat_history")
-async def archive_chat_history(_: None = Depends(validate_connection)):
-    return await process_chat_history("archive")
-
-@app.delete("/api/delete_chat_history")
-async def delete_chat_history(_: None = Depends(validate_connection)):
-    return await process_chat_history("delete")
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -367,28 +459,51 @@ async def monitor_notifications():
 
 async def process_chat_history(action: str, filenames: list[str] = None):
     os.makedirs("archived", exist_ok=True)
-    files_processed = 0
+    wav_count = txt_count = 0
+    valid_exts = {"wav", "txt"}
     filename_pattern = re.compile(r"^\d{19}\.(wav|txt)$")
 
-    with os.scandir("output") as entries:
-        for entry in entries:
-            if entry.is_file() and re.fullmatch(filename_pattern, entry.name):
-                if filenames and entry.name not in filenames:
-                    continue
+    def is_valid_file(name):
+        return re.fullmatch(filename_pattern, name) and os.path.isfile(os.path.join("output", name))
 
-                try:
-                    if action == "archive":
-                        shutil.move(entry.path, os.path.join("archived", entry.name))
-                    elif action == "delete":
-                        secure_delete(entry.path)
-                    files_processed += 1
-                except Exception as e:
-                    return {"success": False, "error": f"Failed to {action} {entry.name}: {str(e)}"}
+    files_to_process = filenames if filenames else [
+        entry.name for entry in os.scandir("output")
+        if entry.is_file() and re.fullmatch(filename_pattern, entry.name)
+    ]
 
+    for name in files_to_process:
+        if not is_valid_file(name):
+            continue
+
+        ext = name.rsplit(".", 1)[-1]
+        if ext not in valid_exts:
+            continue
+
+        path = os.path.join("output", name)
+        try:
+            if action == "archive":
+                shutil.move(path, os.path.join("archived", name))
+            elif action == "delete":
+                secure_delete(path)
+
+            if ext == "wav":
+                wav_count += 1
+            elif ext == "txt":
+                txt_count += 1
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to {action} {name}: {str(e)}"
+            }
+
+    total = wav_count + txt_count
     return {
-        "success": files_processed > 0,
-        "message": f"{action.capitalize()}d {files_processed} chat history files."
-        if files_processed else f"No valid chat history files found to {action}."
+        "success": total > 0,
+        "message": (
+            f"{action.capitalize()}d {total} chat history files "
+            f"({wav_count} .wav, {txt_count} .txt)."
+            if total else f"No valid chat history files found to {action}."
+        )
     }
 
 def secure_delete(file_path, passes=3):

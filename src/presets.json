@@ -1,0 +1,10 @@
+[
+    {
+        "name": "Lights on",
+        "prompt": "Turn on the lights."
+    },
+    {
+        "name": "Lights off",
+        "prompt": "Turn off the lights."
+    }
+]

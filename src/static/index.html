@@ -35,8 +35,8 @@
         <canvas id="canvas"></canvas>
     </div>
 
-    <div class="sidebar hidden" id="historySidebar">
-        <button id="closeSidebar">✖</button>
+    <div class="sidebar left hidden" id="historySidebar">
+        <button id="closeHistorySidebar">✖</button>
         <h3>Chat History</h3>
         
         <div class="search-container">
@@ -48,6 +48,17 @@
         <div class="history-actions">
             <button id="deleteButton">🗑 Delete</button>
             <button id="archiveButton">📦 Archive</button> 
+        </div>
+    </div>
+
+    <div class="sidebar right hidden" id="presetSidebar">
+        <button id="closePresetSidebar">✖</button>
+        <h3>Presets</h3>
+        <div id="presetList"></div>
+
+        <div class="preset-actions">
+            <button id="modifyButton">➕ Add</button>
+            <button id="removeButton">🗑 Remove</button> 
         </div>
     </div>
 
@@ -132,6 +143,22 @@
         </div>
     </div>
 
+    <!-- Presets Modal -->
+    <div id="presetModal" class="hidden">
+        <div class="modal-container">
+            <label for="presetName">Preset Name:</label>
+            <input type="text" id="presetName">
+            
+            <label for="presetPrompt">Prompt:</label>
+            <textarea id="presetPrompt"></textarea>
+            
+            <div class="preset-modal-actions">
+                <button id="savePreset">Save</button>
+                <button id="cancelPreset">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Confirmation Modal -->
     <div id="confirmationModal" class="hidden">
         <div class="modal-container">
@@ -166,6 +193,7 @@
     <script src="/static/js/textInput.js" defer></script>
     <script src="/static/js/voiceInput.js" defer></script>
     <script src="/static/js/chatHistory.js" defer></script>
+    <script src="/static/js/presets.js" defer></script>
     <script src="/static/js/clients.js" defer></script>
     <script src="/static/js/adaptiveBg.js" defer></script>
 </body>

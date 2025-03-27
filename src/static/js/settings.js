@@ -56,9 +56,11 @@ document.addEventListener("DOMContentLoaded", async function () {
         const clientsModal = document.getElementById("clientsModal");
         const settingsModal = document.getElementById("settingsModal");
         const confirmationModal = document.getElementById("confirmationModal");
+        const presetModal = document.getElementById("presetModal");
     
         if (clientsModal && !clientsModal.classList.contains("hidden")) return;
         if (confirmationModal && !confirmationModal.classList.contains("hidden")) return;
+        if (presetModal && !presetModal.classList.contains("hidden")) return;
     
         if (event.key === "s") {
             event.preventDefault();

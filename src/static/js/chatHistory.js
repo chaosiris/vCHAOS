@@ -4,7 +4,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const historyButton = document.getElementById("historyButton");
     const historySidebar = document.getElementById("historySidebar");
     const historyList = document.getElementById("historyList");
-    const closeSidebar = document.getElementById("closeSidebar");
+    const closeHistorySidebar = document.getElementById("closeHistorySidebar");
+    const canvas = document.getElementById("canvas");
+    const minSwipeDistance = 50;
+    let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 
     archiveButton.addEventListener("click", async function () {
         await archiveChatHistory();
@@ -15,22 +18,35 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     historyButton.addEventListener("click", async function () {
-        historySidebar.classList.remove("hidden");
-        historySidebar.classList.add("show");
-        await loadChatHistory();
+        // Close preset sidebar to prevent overlap on mobile screens
+        if (window.innerWidth <= 768) { 
+            const presetSidebar = document.getElementById("presetSidebar");
+            if (presetSidebar) {
+                presetSidebar.classList.remove("show"); 
+                setTimeout(() => {
+                    presetSidebar.classList.add("hidden");
+                }, 300);
+            }
+        }
+        if (historySidebar.classList.contains("hidden")) {
+            historySidebar.classList.remove("hidden");
+        }
+        historySidebar.classList.toggle("show");
+        if (historySidebar.classList.contains("show")) {
+            await loadChatHistory();
+        }
     });
-
-    function closeSidebarPanel() {
+    function closeHistorySidebarPanel() {
         historySidebar.classList.remove("show");
         setTimeout(() => {
             historySidebar.classList.add("hidden");
         }, 300);
     }
 
-    closeSidebar.addEventListener("click", closeSidebarPanel);
+    closeHistorySidebar.addEventListener("click", closeHistorySidebarPanel);
     canvas.addEventListener("click", function () {
         if (historySidebar.classList.contains("show")) {
-            closeSidebarPanel();
+            closeHistorySidebarPanel();
         }
     });
 
@@ -44,17 +60,19 @@ document.addEventListener("DOMContentLoaded", function () {
         const clientsModal = document.getElementById("clientsModal");
         const settingsModal = document.getElementById("settingsModal");
         const confirmationModal = document.getElementById("confirmationModal");
+        const presetModal = document.getElementById("presetModal");
     
         if (clientsModal && !clientsModal.classList.contains("hidden")) return;
         if (settingsModal && !settingsModal.classList.contains("hidden")) return;
         if (confirmationModal && !confirmationModal.classList.contains("hidden")) return;
+        if (presetModal && !presetModal.classList.contains("hidden")) return;
     
         const historySidebar = document.getElementById("historySidebar");
     
         if (event.key === "h") {
             event.preventDefault();
             if (historySidebar.classList.contains("show")) {
-                closeSidebar.click();
+                closeHistorySidebar.click();
             } else {
                 historyButton.click();
             }
@@ -78,42 +96,65 @@ document.addEventListener("DOMContentLoaded", function () {
     
         try {
             const response = await fetch(`/api/get_history?search=${encodeURIComponent(searchQuery)}`);
-            if (!response.ok) {
-                throw new Error("Failed to load history.");
-            }
-            let data = await response.json();
+            if (!response.ok) throw new Error("Failed to load history.");
     
+            let data = await response.json();
             historyList.innerHTML = "";
     
             if (data.length === 0) {
                 historyList.innerHTML = "<p>No matching results.</p>";
+                updateHistoryActionButtons();
                 return;
             }
     
             data.forEach((item) => {
-                const historyItem = document.createElement("div");
-                historyItem.classList.add("history-item-container");
-                historyItem.innerHTML = `
-                    <button class="history-item" data-wav="${item.wav}" data-txt="${item.txt}">
-                        📄 <strong>${new Date(item.timestamp).toLocaleString()}</strong><br>
-                        ${item.preview_text}
-                    </button>
+                const container = document.createElement("div");
+                container.classList.add("history-item-container");
+    
+                container.innerHTML = `
+                    <label class="history-label">
+                        <input type="checkbox" class="history-checkbox" data-txt="${item.txt}" data-wav="${item.wav}">
+                        <button class="history-item" data-wav="${item.wav}" data-txt="${item.txt}">
+                            📄 <strong>${new Date(item.timestamp).toLocaleString()}</strong><br>
+                            ${item.preview_text}
+                        </button>
+                    </label>
                 `;
-                historyList.appendChild(historyItem);
+    
+                historyList.appendChild(container);
+            });
+    
+            historyList.querySelectorAll(".history-checkbox").forEach(cb => {
+                cb.addEventListener("change", updateHistoryActionButtons);
             });
     
             historyList.addEventListener("click", function (event) {
                 const button = event.target.closest(".history-item");
                 if (!button) return;
-            
                 const wavFile = button.getAttribute("data-wav");
                 const txtFile = button.getAttribute("data-txt");
                 loadChatFromHistory(wavFile, txtFile);
             });
     
+            updateHistoryActionButtons();
         } catch (error) {
             historyList.innerHTML = `<p style="color: red;">Error loading history.</p>`;
             console.error(error);
+            updateHistoryActionButtons();
+        }
+    }
+
+    function updateHistoryActionButtons() {
+        const selected = document.querySelectorAll(".history-checkbox:checked");
+        const archiveButton = document.getElementById("archiveButton");
+        const deleteButton = document.getElementById("deleteButton");
+    
+        if (selected.length === 0) {
+            archiveButton.textContent = "📦 Archive";
+            deleteButton.textContent = "🗑 Delete";
+        } else {
+            archiveButton.textContent = `📦 Archive (${selected.length})`;
+            deleteButton.textContent = `🗑 Delete (${selected.length})`;
         }
     }
     
@@ -195,11 +236,26 @@ document.addEventListener("DOMContentLoaded", function () {
     async function archiveChatHistory() {
         const confirmed = await showConfirmationModal("archive");
         if (!confirmed) return;
-
+    
+        const selected = document.querySelectorAll(".history-checkbox:checked");
+        const filenames = Array.from(selected).flatMap(cb => [
+            cb.dataset.wav?.replace("/output/", ""),
+            cb.dataset.txt?.replace("/output/", "")
+        ]).filter(Boolean);
+    
         try {
-            const response = await fetch("/api/archive_chat_history", { method: "POST" });
+            const response = await fetch("/api/archive_chat_history", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: filenames.length
+                ? JSON.stringify({ filenames })
+                : JSON.stringify({})
+            });
+    
             const data = await response.json();
-            let message = response.ok && data.success ? data.message : "No files available for archive!";
+            const message = response.ok && data.success
+                ? data.message
+                : "No files available for archive!";
             displayResultMessage(message);
             if (data.success) await loadChatHistory();
         } catch {
@@ -211,10 +267,25 @@ document.addEventListener("DOMContentLoaded", function () {
         const confirmed = await showConfirmationModal("delete");
         if (!confirmed) return;
 
+        const selected = document.querySelectorAll(".history-checkbox:checked");
+        const filenames = Array.from(selected).flatMap(cb => [
+            cb.dataset.wav?.replace("/output/", ""),
+            cb.dataset.txt?.replace("/output/", "")
+        ]).filter(Boolean);
+
         try {
-            const response = await fetch("/api/delete_chat_history", { method: "DELETE" });
+            const response = await fetch("/api/delete_chat_history", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: filenames.length
+                ? JSON.stringify({ filenames })
+                : JSON.stringify({})
+            });
+
             const data = await response.json();
-            let message = response.ok && data.success ? data.message : "No files available for deletion!";
+            const message = response.ok && data.success
+                ? data.message
+                : "No files available for deletion!";
             displayResultMessage(message);
             if (data.success) await loadChatHistory();
         } catch {
@@ -240,14 +311,9 @@ document.addEventListener("DOMContentLoaded", function () {
             modal.classList.add("hidden");
         };
     }
-
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchEndX = 0;
-    let touchEndY = 0;
-    const minSwipeDistance = 50;
     
     document.addEventListener("touchstart", function (event) {
+        if (event.target.closest("audio")) return;
         const touch = event.touches[0];
         touchStartX = touch.clientX;
         touchStartY = touch.clientY;
@@ -256,6 +322,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }, { passive: true });
     
     document.addEventListener("touchmove", function (event) {
+        if (event.target.closest("audio")) return;
         const deltaX = event.touches[0].clientX - touchStartX;
         const deltaY = Math.abs(event.touches[0].clientY - touchStartY);
     
@@ -267,7 +334,8 @@ document.addEventListener("DOMContentLoaded", function () {
         touchEndY = event.touches[0].clientY;
     }, { passive: false });
     
-    document.addEventListener("touchend", function () {
+    document.addEventListener("touchend", function (event) {
+        if (event.target.closest("audio")) return;
         const swipeDistance = touchEndX - touchStartX;
         const sidebarOpen = historySidebar.classList.contains("show");
     
@@ -288,7 +356,7 @@ document.addEventListener("DOMContentLoaded", function () {
             historySidebar.classList.add("show");
             loadChatHistory();
         } else if (swipeDistance < -minSwipeDistance && sidebarOpen) {
-            closeSidebarPanel();
+            closeHistorySidebarPanel();
         }
     });
 });

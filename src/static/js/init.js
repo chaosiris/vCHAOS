@@ -209,13 +209,11 @@ function connectWebSocket() {
                 .then(blob => {
                     audioUrl = URL.createObjectURL(blob);
 
-                    document.getElementById("textDisplay").scrollTop = 0;
-                    if (window.appSettings["show-sent-prompts"]) {
-                        const textPrefix = document.getElementById("textDisplay").querySelector("strong");
-                        textPrefix.textContent = "Latest Response:";
-                        textPrefix.style.removeProperty("color");
-                    }
+                    const textPrefix = document.getElementById("textDisplay").querySelector("strong");
+                    textPrefix.textContent = "Latest Response:";
+                    textPrefix.style.removeProperty("color");
                     textOutput.innerText = textContent;
+                    document.getElementById("textDisplay").scrollTop = 0;
 
                     if (!historySidebar.classList.contains("hidden")) {
                         document.dispatchEvent(new Event("chatHistoryUpdate"));
@@ -355,8 +353,8 @@ let lastTouchEnd = 0;
 document.addEventListener("touchend", function (event) {
     const now = Date.now();
 
-    // If tapping inside the history list, allow double-tap
-    if (event.target.closest("#historyList")) {
+    // If tapping inside the history and preset list, allow double-tap
+    if (event.target.closest("#historyList, #presetList")) {
         return;
     }
 
