@@ -326,7 +326,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const deltaX = event.touches[0].clientX - touchStartX;
         const deltaY = Math.abs(event.touches[0].clientY - touchStartY);
     
-        if (Math.abs(deltaX) > deltaY) {
+        if (Math.abs(deltaX) > deltaY && event.cancelable) {
             event.preventDefault();
         }
     

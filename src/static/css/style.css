@@ -258,6 +258,11 @@ input:checked + .slider:before {
     max-width: 200px;
 }
 
+#modelInput option {
+    background-color: #222;
+    color: white;
+}
+
 .modal-buttons {
     margin-top: 10px;
 }

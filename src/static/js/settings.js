@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const timeoutInput = document.getElementById("timeoutInput");
     const modelInput = document.getElementById("modelInput");
 
-    initModelPath = "";
+    initModelName = "";
     initVoiceInput = "";
     window.appSettings = {};
     await loadSettings();
@@ -25,10 +25,33 @@ document.addEventListener("DOMContentLoaded", async function () {
             
             const settings = await response.json();
             window.appSettings = settings;
+            await populateModelDropdown(settings["model-name"]);
             console.log("Settings loaded:", window.appSettings);
         } catch (error) {
             console.error("Error fetching settings:", error);
             window.appSettings = {};
+        }
+    }
+
+    async function populateModelDropdown() {
+        try {
+            const response = await fetch("/api/get_models");
+            if (!response.ok) throw new Error("Failed to load models");
+    
+            const models = await response.json();
+            modelInput.innerHTML = "";
+    
+            models.forEach(model => {
+                const option = document.createElement("option");
+                option.value = model.name;
+                option.textContent = model.name;
+                if (model.name === window.appSettings["model-name"]) {
+                    option.selected = true;
+                }
+                modelInput.appendChild(option);
+            });
+        } catch (err) {
+            console.error("Error populating model dropdown:", err);
         }
     }
 
@@ -40,8 +63,8 @@ document.addEventListener("DOMContentLoaded", async function () {
         saveChatHistory.checked = window.appSettings["save-chat-history"];
         adaptiveBg.checked = window.appSettings["adaptive-background"];
         timeoutInput.value = window.appSettings["timeout"];
-        modelInput.value = window.appSettings["model_path"];
-        initModelPath = modelInput.value;
+        modelInput.value = window.appSettings["model-name"];
+        initModelName = modelInput.value;
         initVoiceInput = enableVoiceInput.value;
         settingsModal.classList.remove("hidden");
     });
@@ -97,7 +120,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 "save-chat-history": saveChatHistory.checked,
                 "adaptive-background": adaptiveBg.checked,
                 "timeout": parseInt(timeoutInput.value),
-                "model_path": modelInput.value
+                "model-name": modelInput.value
             }
         };
 
@@ -133,7 +156,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             }
 
             settingsModal.classList.add("hidden");
-            if (initModelPath !== modelInput.value) {
+            if (initModelName !== modelInput.value) {
                 // Refresh page to reload Live2D model if path changed
                 window.location.reload();
             }

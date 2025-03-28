@@ -3,6 +3,13 @@ var socket;
 var modelLoaded = false;
 let manualDisconnect = false;
 
+// Idle Motion Variables
+let isSpeaking = false;
+let idleMotion = null;
+let idleLoopTimeout = null;
+let modelDefaultParams = {};
+
+// Audio Player Variables
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let audioSourceNode = null;
 let analyser = null;
@@ -57,7 +64,10 @@ const live2dModule = (function() {
 
             modelLoaded = true;
             console.log("Live2D model loaded successfully!");
-
+            idleMotion = modelInfo.idleMotion;
+            setTimeout(() => modelMotionController.loopIdle(), 10);
+            modelMotionController.captureDefaultPose();
+        
         } catch (error) {
             console.error("Error loading Live2D model:", error);
         }
@@ -125,6 +135,45 @@ const live2dModule = (function() {
     };
 })();
 
+const modelMotionController = {
+    stopAll() {
+        model2?.internalModel?.motionManager?.stopAllMotions();
+        clearTimeout(idleLoopTimeout);
+    },
+
+    playIdle(loop = true) {
+        if (model2 && idleMotion) {
+            model2.motion(idleMotion, 0, { loop });
+        }
+    },
+
+    loopIdle(interval = 1000) {
+        if (!isSpeaking && model2) {
+            this.playIdle();
+            idleLoopTimeout = setTimeout(() => this.loopIdle(interval), interval);
+        }
+    },
+
+    captureDefaultPose() {
+        const core = model2?.internalModel?.coreModel;
+        if (!core) return;
+
+        modelDefaultParams = {};
+        core._parameterIds.forEach(id => {
+            modelDefaultParams[id] = core.getParameterValueById(id);
+        });
+    },
+
+    resetToDefaultPose() {
+        const core = model2?.internalModel?.coreModel;
+        if (!core || !modelDefaultParams) return;
+
+        for (const id in modelDefaultParams) {
+            core.setParameterValueById(id, modelDefaultParams[id]);
+        }
+    }
+};
+
 function connectWebSocket() {
     if (manualDisconnect) return;
 
@@ -141,10 +190,25 @@ function connectWebSocket() {
         }
 
         if (!modelLoaded) {
-            live2dModule.loadModel({
-                url: window.appSettings["model_path"],
-                kScale: window.appSettings["scale"]
-            });
+            (async () => {
+                const selectedName = window.appSettings["model-name"];
+                try {
+                    const modelList = await fetch("/api/get_models").then(res => res.json());
+                    const selectedModel = modelList.find(m => m.name === selectedName);
+    
+                    if (selectedModel) {
+                        live2dModule.loadModel({
+                            url: selectedModel.file_path,
+                            kScale: selectedModel.kScale,
+                            idleMotion: selectedModel.idleMotion
+                        });
+                    } else {
+                        console.error(`Model '${selectedName}' not found in model list.`);
+                    }
+                } catch (err) {
+                    console.error("Error loading model list:", err);
+                }
+            })();
         }
     };
 
@@ -249,6 +313,11 @@ function playAudioLipSync(audioUrl) {
         return;
     }
 
+    // Stop idle motion and reset to default state
+    isSpeaking = true;
+    modelMotionController.stopAll();
+    modelMotionController.resetToDefaultPose();
+
     let audioSource = document.getElementById("audioSource");
 
     if (!audioPlayer || !audioSource) {
@@ -318,6 +387,8 @@ function playAudioLipSync(audioUrl) {
                     model2.internalModel.coreModel.setParamFloat("PARAM_MOUTH_OPEN_Y", 0);
                 }
             });
+            isSpeaking = false;
+            setTimeout(() => modelMotionController.loopIdle(), 3000);
         }
     }
 

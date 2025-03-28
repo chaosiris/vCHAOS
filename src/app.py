@@ -27,6 +27,7 @@ pending_deletions = {}  # Track files pending deletion
 client_receipts = {}  # Track which clients have received a given file
 notification_file = "output/new_audio.json"
 preset_file = "presets.json"
+model_dict_file = "model_dict.json"
 
 # Serve static files
 app.mount("/static", StaticFiles(directory="static", html=True), name="static")
@@ -126,6 +127,33 @@ async def update_settings(request: Request, _: None = Depends(validate_connectio
 
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+@app.get("/api/get_models")
+async def get_available_models():
+    try:
+        with open(model_dict_file, "r", encoding="utf-8") as f:
+            all_models = json.load(f)
+
+        filtered_models = []
+        for m in all_models:
+            name = m.get("name")
+            path = m.get("file_path")
+            if name and path:
+                filtered_models.append({
+                    "name": name,
+                    "file_path": path,
+                    "kScale": m.get("kScale"),
+                    "idleMotion": m.get("idleMotion")
+                })
+
+        return JSONResponse(filtered_models)
+
+    except FileNotFoundError:
+        return JSONResponse({"error": "model_dict.json not found"}, status_code=404)
+    except json.JSONDecodeError:
+        return JSONResponse({"error": "Invalid JSON format in model_dict.json"}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.get("/api/get_history")
 async def get_chat_history(search: str = Query(default=None, description="Search query for filtering history"), _: None = Depends(validate_connection)):

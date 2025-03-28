@@ -1,0 +1,8 @@
+[
+    {
+        "name": "shizuku",
+        "file_path": "/live2d_models/shizuku/shizuku.model3.json",
+        "kScale": 0.2,
+        "idleMotion": "idle"
+    }
+]
