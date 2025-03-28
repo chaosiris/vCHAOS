@@ -13,10 +13,11 @@ backend:
 
 frontend:
   show-sent-prompts: true    # After sending a text prompt, should it be displayed? // Default: true
-  enable-prompt-repeat: true # Enable the button to re-paste your previous text prompt into the input text field OR resend your previous voice prompt // Default: true
+  enable-idle-motion: true   # Enable the idle motion loop of the Live2D model, as specified in model_dict.json. // Default: true
+  enable-prompt-repeat: true # Enable the button to re-paste your previous text prompt into the input text field OR resend your previous voice prompt. // Default: true
   enable-mouth-scaling: true # Scale the mouth movement of the Live2D model according to the syllables being pronounced. Disable if too resource intensive on older browsers/devices. // Default: true
   enable-voice-input: true   # Should the Push to Talk voice input button be enabled? Requires the app protocol to be configured to HTTPS to work over mobile devices. // Default: true
   save-chat-history: true    # Should output audio/text files be saved? Disable for private mode. // Default: true
   adaptive-background: true  # Should the background be changed according to the time of day? // Default: true
   timeout: 180               # How long should the user wait for a response from the pipeline before timing out (in seconds?) // Default: 180
-  model-name: shizuku        # Specify the path of which Live2D model to use // Default: shizuku
+  model-name: shizuku        # Specify the name of the Live2D model to use (populated by the list of models in model_dict.json) // Default: shizuku

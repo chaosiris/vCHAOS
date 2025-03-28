@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const cancelSettings = document.getElementById("cancelSettings");
 
     const showSentPrompts = document.getElementById("showSentPrompts");
+    const enableIdleMotion = document.getElementById("enableIdleMotion");
     const enablePromptRepeat = document.getElementById("enablePromptRepeat");
     const enableMouthScaling = document.getElementById("enableMouthScaling");
     const enableVoiceInput = document.getElementById("enableVoiceInput");
@@ -15,6 +16,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     initModelName = "";
     initVoiceInput = "";
+    initIdleMotion = "";
     window.appSettings = {};
     await loadSettings();
 
@@ -57,6 +59,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     settingsButton.addEventListener("click", async function () {
         showSentPrompts.checked = window.appSettings["show-sent-prompts"];
+        enableIdleMotion.checked = window.appSettings["enable-idle-motion"];
         enablePromptRepeat.checked = window.appSettings["enable-prompt-repeat"];
         enableMouthScaling.checked = window.appSettings["enable-mouth-scaling"];
         enableVoiceInput.checked = window.appSettings["enable-voice-input"];
@@ -114,6 +117,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         const newSettings = {
             "frontend": {
                 "show-sent-prompts": showSentPrompts.checked,
+                "enable-idle-motion": enableIdleMotion.checked,
                 "enable-prompt-repeat": enablePromptRepeat.checked,
                 "enable-mouth-scaling": enableMouthScaling.checked,
                 "enable-voice-input": enableVoiceInput.checked,
@@ -147,6 +151,12 @@ document.addEventListener("DOMContentLoaded", async function () {
                     // Refresh page to re-initialize voiceInput.js
                     window.location.reload();
                     return;
+                }
+            }
+
+            if (initIdleMotion !== enableIdleMotion.checked) {
+                if (enableIdleMotion.checked) {
+                    window.location.reload();
                 }
             }
 

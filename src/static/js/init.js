@@ -64,9 +64,11 @@ const live2dModule = (function() {
 
             modelLoaded = true;
             console.log("Live2D model loaded successfully!");
-            idleMotion = modelInfo.idleMotion;
-            setTimeout(() => modelMotionController.loopIdle(), 10);
-            modelMotionController.captureDefaultPose();
+            if (window.appSettings["enable-idle-motion"]) {
+                idleMotion = modelInfo.idleMotion;
+                setTimeout(() => modelMotionController.loopIdle(), 10);
+                modelMotionController.captureDefaultPose();
+            }
         
         } catch (error) {
             console.error("Error loading Live2D model:", error);
@@ -141,15 +143,11 @@ const modelMotionController = {
         clearTimeout(idleLoopTimeout);
     },
 
-    playIdle(loop = true) {
-        if (model2 && idleMotion) {
-            model2.motion(idleMotion, 0, { loop });
-        }
-    },
-
     loopIdle(interval = 1000) {
-        if (!isSpeaking && model2) {
-            this.playIdle();
+        if (!isSpeaking && model2 && window.appSettings["enable-idle-motion"]) {
+            if (model2 && idleMotion) {
+                model2.motion(idleMotion, 0);
+            }
             idleLoopTimeout = setTimeout(() => this.loopIdle(interval), interval);
         }
     },
@@ -314,9 +312,11 @@ function playAudioLipSync(audioUrl) {
     }
 
     // Stop idle motion and reset to default state
-    isSpeaking = true;
-    modelMotionController.stopAll();
-    modelMotionController.resetToDefaultPose();
+    if (window.appSettings["enable-idle-motion"]) {
+        isSpeaking = true;
+        modelMotionController.stopAll();
+        modelMotionController.resetToDefaultPose();
+    }
 
     let audioSource = document.getElementById("audioSource");
 
@@ -387,8 +387,10 @@ function playAudioLipSync(audioUrl) {
                     model2.internalModel.coreModel.setParamFloat("PARAM_MOUTH_OPEN_Y", 0);
                 }
             });
-            isSpeaking = false;
-            setTimeout(() => modelMotionController.loopIdle(), 3000);
+            if (window.appSettings["enable-idle-motion"]) {
+                isSpeaking = false;
+                setTimeout(() => modelMotionController.loopIdle(), 3000);
+            }
         }
     }
 
