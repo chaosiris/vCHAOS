@@ -2,21 +2,21 @@ backend:
   app:
     host: 0.0.0.0     # Host address (use 0.0.0.0 for LAN access; or 127.0.0.1 for host machine access only) // Default: 0.0.0.0
     port: 11405       # Port number for the web server (can be any unassigned port) // Default: 11405
-    protocol: http   # Use HTTP/HTTPS (set "http" or "https". For https, cert.pem and key.pem must be present in the same directory as app.py!) // Default: http
+    protocol: http    # Use HTTP/HTTPS (set "http" or "https". For https, cert.pem and key.pem must be present in the same directory as app.py!) // Default: http
     multicast: false  # If initiated from a satellite device, should the output be sent to the satellite device even if there are clients connected to the frontend? // Default: false
   logging:
-    level: DEBUG      # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL) // Default: ERROR
+    level: ERROR      # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL) // Default: ERROR
   urls:
     ollama_webhook: http://homeassistant.local:8123/api/webhook/ollama_chat    # Webhook URL for your Ollama endpoint, as configured in HAOS automations.
     whisper_host: 127.0.0.1    # Host for Whisper instance // Default: 127.0.0.1
     whisper_port: 10300    # Port for Whisper instance // Default: 10300
 
 frontend:
-  show-sent-prompts: tre   # After sending a text prompt, should it be displayed? // Default: true
+  show-sent-prompts: true    # After sending a text prompt, should it be displayed? // Default: true
   enable-prompt-repeat: true # Enable the button to re-paste your previous text prompt into the input text field OR resend your previous voice prompt // Default: true
   enable-mouth-scaling: true # Scale the mouth movement of the Live2D model according to the syllables being pronounced. Disable if too resource intensive on older browsers/devices. // Default: true
-  enable-voice-input: true  # Should the Push to Talk voice input button be enabled? Requires the app protocol to be configured to HTTPS to work over mobile devices. // Default: true
+  enable-voice-input: true   # Should the Push to Talk voice input button be enabled? Requires the app protocol to be configured to HTTPS to work over mobile devices. // Default: true
   save-chat-history: true    # Should output audio/text files be saved? Disable for private mode. // Default: true
   adaptive-background: true  # Should the background be changed according to the time of day? // Default: true
   timeout: 180               # How long should the user wait for a response from the pipeline before timing out (in seconds?) // Default: 180
-  model-name: shizuku           # Specify the path of which Live2D model to use // Default: shizuku
+  model-name: shizuku        # Specify the path of which Live2D model to use // Default: shizuku
