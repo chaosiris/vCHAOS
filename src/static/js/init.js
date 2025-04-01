@@ -54,7 +54,8 @@ const live2dModule = (function() {
             if (!window.appSettings["enable-idle-motion"]) {
                 enableHeadTracking(model2);
             }
-            enablePointerEvents(model2, modelInfo.tapMotionName, modelInfo.tapMotionCount);
+
+            enablePointerEvents(model2, modelInfo.idleMotionName, modelInfo.idleMotionCount, modelInfo.tapMotionName, modelInfo.tapMotionCount);
 
             mouthParamId = getMouthOpenParam(model2);
             if (mouthParamId) {
@@ -116,21 +117,15 @@ const live2dModule = (function() {
         updateHeadMovement();
     }
 
-    function enablePointerEvents(model, tapMotionName, tapMotionCount) {
-        let tapTimer;
+    function enablePointerEvents(model, idleMotionName, idleMotionCount, tapMotionName, tapMotionCount) {
         let isDrag = false;
-        const tapThreshold = 10000;
-    
         model.buttonMode = true;
     
         model.on("pointerdown", (e) => {
             model.dragging = true;
             model._pointerX = e.data.global.x - model.x;
             model._pointerY = e.data.global.y - model.y;
-    
-            tapTimer = setTimeout(() => {
-                model.dragging = false;
-            }, tapThreshold);
+
         });
     
         model.on("pointermove", (e) => {
@@ -143,16 +138,23 @@ const live2dModule = (function() {
     
         model.on("pointerup", () => {
             model.dragging = false;
-            clearTimeout(tapTimer);
             if (!model.dragging && window.appSettings["enable-tap-motion"] && !isDrag) {
                 modelMotionController.tapMotion(tapMotionName, tapMotionCount);
+
+                // Resume idle motion
+                const checkMotionInterval = setInterval(() => {
+                    if (!model2?.internalModel?.motionState?.isActive(tapMotionName, tapMotionCount)) {
+                        const randomIndex = idleMotionCount === 1 ? 0 : Math.floor(Math.random() * idleMotionCount);
+                        clearInterval(checkMotionInterval);
+                        modelMotionController.loopIdle(idleMotionName, randomIndex);
+                    }
+                }, 100);
             }
             isDrag = false;
         });
     
         model.on("pointerupoutside", () => {
             model.dragging = false;
-            clearTimeout(tapTimer);
         });
     }
 
@@ -194,9 +196,9 @@ const modelMotionController = {
         }
     },
 
-    tapMotion(tapMotionName = "tap", count = 1) {
+    tapMotion(tapMotionName = "tap", tapMotionCount = 0) {
         if (model2 && model2.internalModel) {
-            const randomIndex = count === 1 ? 0 : Math.floor(Math.random() * count);
+            const randomIndex = tapMotionCount === 1 ? 0 : Math.floor(Math.random() * count);
             this.stopAll();
             model2.motion(tapMotionName, randomIndex);
         }
