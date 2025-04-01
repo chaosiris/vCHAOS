@@ -5,7 +5,6 @@ let manualDisconnect = false;
 
 // Idle Motion Variables
 let isSpeaking = false;
-let idleMotion = null;
 let idleLoopTimeout = null;
 let modelDefaultParams = {};
 
@@ -47,10 +46,15 @@ const live2dModule = (function() {
 
             model2.scale.set(modelInfo.kScale || 0.2);
             model2.anchor.set(0.5, 0.5);
-            model2.position.set(app.view.width / 2, app.view.height / 2);
+            model2.position.set(
+                (app.view.width / 2) + (modelInfo.xOffset || 0),
+                (app.view.height / 2) + (modelInfo.yOffset || 0)
+            );
 
-            draggable(model2);
-            enableHeadTracking(model2);
+            if (!window.appSettings["enable-idle-motion"]) {
+                enableHeadTracking(model2);
+            }
+            enablePointerEvents(model2, modelInfo.tapMotionName, modelInfo.tapMotionCount);
 
             mouthParamId = getMouthOpenParam(model2);
             if (mouthParamId) {
@@ -62,11 +66,16 @@ const live2dModule = (function() {
                 }
             }
 
+            if (modelInfo.tapMotion) {
+                model2.on("pointerdown", () => 
+                    modelMotionController.tapMotion(modelInfo.tapMotion, modelInfo.tapMotionCount));
+            }
+
             modelLoaded = true;
             console.log("Live2D model loaded successfully!");
             if (window.appSettings["enable-idle-motion"]) {
-                idleMotion = modelInfo.idleMotion;
-                setTimeout(() => modelMotionController.loopIdle(), 10);
+                const randomIndex = modelInfo.idleMotionCount === 1 ? 0 : Math.floor(Math.random() * modelInfo.idleMotionCount);
+                setTimeout(() => modelMotionController.loopIdle(modelInfo.idleMotion, randomIndex), 10);
                 modelMotionController.captureDefaultPose();
             }
         
@@ -108,27 +117,46 @@ const live2dModule = (function() {
     
             requestAnimationFrame(updateHeadMovement);
         }
-    
+
         updateHeadMovement();
     }
 
-    function draggable(model) {
+    function enablePointerEvents(model, tapMotionName, tapMotionCount) {
+        let tapTimer;
+        const tapThreshold = 300;
+    
         model.buttonMode = true;
+    
         model.on("pointerdown", (e) => {
             model.dragging = true;
             model._pointerX = e.data.global.x - model.x;
             model._pointerY = e.data.global.y - model.y;
+    
+            tapTimer = setTimeout(() => {
+                model.dragging = false;
+            }, tapThreshold);
         });
-
+    
         model.on("pointermove", (e) => {
             if (model.dragging) {
                 model.position.x = e.data.global.x - model._pointerX;
                 model.position.y = e.data.global.y - model._pointerY;
             }
         });
-
-        model.on("pointerupoutside", () => (model.dragging = false));
-        model.on("pointerup", () => (model.dragging = false));
+    
+        model.on("pointerup", () => {
+            model.dragging = false;
+            clearTimeout(tapTimer);
+    
+            if (!model.dragging && windows.appSettings["enable-tap-motion"]) {
+                modelMotionController.tapMotion(tapMotionName, tapMotionCount);
+            }
+        });
+    
+        model.on("pointerupoutside", () => {
+            model.dragging = false;
+            clearTimeout(tapTimer);
+        });
     }
 
     return {
@@ -143,12 +171,10 @@ const modelMotionController = {
         clearTimeout(idleLoopTimeout);
     },
 
-    loopIdle(interval = 1000) {
+    loopIdle(idleMotionName = "idle", randomIndex = 0, interval = 1000) {
         if (!isSpeaking && model2 && window.appSettings["enable-idle-motion"]) {
-            if (model2 && idleMotion) {
-                model2.motion(idleMotion, 0);
-            }
-            idleLoopTimeout = setTimeout(() => this.loopIdle(interval), interval);
+            model2.motion(idleMotionName, randomIndex);
+            idleLoopTimeout = setTimeout(() => this.loopIdle(idleMotionName, randomIndex, interval), interval);
         }
     },
 
@@ -168,6 +194,13 @@ const modelMotionController = {
 
         for (const id in modelDefaultParams) {
             core.setParameterValueById(id, modelDefaultParams[id]);
+        }
+    },
+
+    tapMotion(tapMotionName = "tap", count = 1) {
+        if (model2 && model2.internalModel) {
+            const randomIndex = count === 1 ? 0 : Math.floor(Math.random() * count);
+            model2.motion(tapMotionName, randomIndex);
         }
     }
 };
@@ -198,7 +231,12 @@ function connectWebSocket() {
                         live2dModule.loadModel({
                             url: selectedModel.file_path,
                             kScale: selectedModel.kScale,
-                            idleMotion: selectedModel.idleMotion
+                            xOffset: selectedModel.xOffset,
+                            yOffset: selectedModel.yOffset,
+                            idleMotion: selectedModel.idleMotion,
+                            idleMotionCount: selectedModel.idleMotionCount,
+                            tapMotion: selectedModel.tapMotion,
+                            tapMotionCount: selectedModel.tapMotionCount
                         });
                     } else {
                         console.error(`Model '${selectedName}' not found in model list.`);

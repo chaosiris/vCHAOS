@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const showSentPrompts = document.getElementById("showSentPrompts");
     const enableIdleMotion = document.getElementById("enableIdleMotion");
+    const enableTapMotion = document.getElementById("enableTapMotion");
     const enablePromptRepeat = document.getElementById("enablePromptRepeat");
     const enableMouthScaling = document.getElementById("enableMouthScaling");
     const enableVoiceInput = document.getElementById("enableVoiceInput");
@@ -60,6 +61,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     settingsButton.addEventListener("click", async function () {
         showSentPrompts.checked = window.appSettings["show-sent-prompts"];
         enableIdleMotion.checked = window.appSettings["enable-idle-motion"];
+        enableTapMotion.checked = window.appSettings["enable-tap-motion"];
         enablePromptRepeat.checked = window.appSettings["enable-prompt-repeat"];
         enableMouthScaling.checked = window.appSettings["enable-mouth-scaling"];
         enableVoiceInput.checked = window.appSettings["enable-voice-input"];
@@ -118,6 +120,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             "frontend": {
                 "show-sent-prompts": showSentPrompts.checked,
                 "enable-idle-motion": enableIdleMotion.checked,
+                "enable-tap-motion": enableTapMotion.checked,
                 "enable-prompt-repeat": enablePromptRepeat.checked,
                 "enable-mouth-scaling": enableMouthScaling.checked,
                 "enable-voice-input": enableVoiceInput.checked,

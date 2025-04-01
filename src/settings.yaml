@@ -14,6 +14,7 @@ backend:
 frontend:
   show-sent-prompts: true    # After sending a text prompt, should it be displayed? // Default: true
   enable-idle-motion: true   # Enable the idle motion loop of the Live2D model, as specified in model_dict.json. // Default: true
+  enable-tap-motion: true    # Enable the tap motion which will be ran whenever you click/tap on your Live2D model, as specified in model_dict.json. // Default: true
   enable-prompt-repeat: true # Enable the button to re-paste your previous text prompt into the input text field OR resend your previous voice prompt. // Default: true
   enable-mouth-scaling: true # Scale the mouth movement of the Live2D model according to the syllables being pronounced. Disable if too resource intensive on older browsers/devices. // Default: true
   enable-voice-input: true   # Should the Push to Talk voice input button be enabled? Requires the app protocol to be configured to HTTPS to work over mobile devices. // Default: true

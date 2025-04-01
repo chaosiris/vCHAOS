@@ -142,8 +142,13 @@ async def get_available_models():
                 filtered_models.append({
                     "name": name,
                     "file_path": path,
-                    "kScale": m.get("kScale"),
-                    "idleMotion": m.get("idleMotion")
+                    "kScale": m.get("kScale", 0.2),
+                    "xOffset": m.get("xOffset", 0),
+                    "yOffset": m.get("yOffset", 0),
+                    "idleMotion": m.get("idleMotion", "idle"),
+                    "idleMotionCount": m.get("idleMotionCount", 1),
+                    "tapMotion": m.get("tapMotion", "tap"),
+                    "tapMotionCount": m.get("tapMotionCount", 1)
                 })
 
         return JSONResponse(filtered_models)
