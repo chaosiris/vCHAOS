@@ -70,8 +70,10 @@ document.addEventListener("DOMContentLoaded", async function () {
         timeoutInput.value = window.appSettings["timeout"];
         modelInput.value = window.appSettings["model-name"];
         initModelName = modelInput.value;
-        initVoiceInput = enableVoiceInput.value;
+        initIdleMotion = enableIdleMotion.checked;
+        initVoiceInput = enableVoiceInput.checked;
         settingsModal.classList.remove("hidden");
+        console.log(initVoiceInput);
     });
 
     document.addEventListener("keydown", function (event) {

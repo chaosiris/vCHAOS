@@ -66,11 +66,6 @@ const live2dModule = (function() {
                 }
             }
 
-            if (modelInfo.tapMotion) {
-                model2.on("pointerdown", () => 
-                    modelMotionController.tapMotion(modelInfo.tapMotion, modelInfo.tapMotionCount));
-            }
-
             modelLoaded = true;
             console.log("Live2D model loaded successfully!");
             if (window.appSettings["enable-idle-motion"]) {
@@ -123,7 +118,8 @@ const live2dModule = (function() {
 
     function enablePointerEvents(model, tapMotionName, tapMotionCount) {
         let tapTimer;
-        const tapThreshold = 300;
+        let isDrag = false;
+        const tapThreshold = 10000;
     
         model.buttonMode = true;
     
@@ -141,16 +137,17 @@ const live2dModule = (function() {
             if (model.dragging) {
                 model.position.x = e.data.global.x - model._pointerX;
                 model.position.y = e.data.global.y - model._pointerY;
+                isDrag = true;
             }
         });
     
         model.on("pointerup", () => {
             model.dragging = false;
             clearTimeout(tapTimer);
-    
-            if (!model.dragging && windows.appSettings["enable-tap-motion"]) {
+            if (!model.dragging && window.appSettings["enable-tap-motion"] && !isDrag) {
                 modelMotionController.tapMotion(tapMotionName, tapMotionCount);
             }
+            isDrag = false;
         });
     
         model.on("pointerupoutside", () => {
@@ -200,6 +197,7 @@ const modelMotionController = {
     tapMotion(tapMotionName = "tap", count = 1) {
         if (model2 && model2.internalModel) {
             const randomIndex = count === 1 ? 0 : Math.floor(Math.random() * count);
+            this.stopAll();
             model2.motion(tapMotionName, randomIndex);
         }
     }
