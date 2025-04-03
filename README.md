@@ -49,10 +49,7 @@ In short, vCHAOS is a **progressive web app** designed to seamlessly integrate w
   - **timeout**: Set a custom timeout duration before cancelling the LLM response.
 
 ## **🎬 Demo**
-<video width="600" controls>
-  <source src="https://chaosiris.github.io/demo_github.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+https://github.com/user-attachments/assets/1176d5f3-09e4-478e-8b15-17137e08ce73
 
 ## **📦 Dependencies**
 ### **On Home Assistant OS Instance:**
