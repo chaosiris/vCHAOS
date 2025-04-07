@@ -13,6 +13,7 @@ services:
       - ./src/output:/output
       - ./src/settings.yaml:/settings.yaml
       - ./src/handler.py:/usr/local/lib/python3.10/dist-packages/wyoming_piper/handler.py
+      - ./src/handler.py:/app/lib/python3.10/site-packages/wyoming_piper/handler.py
     restart: always
     command: --voice en_US-amy-medium 
     deploy:
