@@ -198,7 +198,7 @@ const modelMotionController = {
 
     tapMotion(tapMotionName = "tap", tapMotionCount = 0) {
         if (model2 && model2.internalModel) {
-            const randomIndex = tapMotionCount === 1 ? 0 : Math.floor(Math.random() * count);
+            const randomIndex = tapMotionCount === 1 ? 0 : Math.floor(Math.random() * tapMotionCount);
             this.stopAll();
             model2.motion(tapMotionName, randomIndex);
         }
@@ -492,6 +492,39 @@ document.addEventListener("click", () => {
     }).catch(error => {
         console.error("Error resuming AudioContext:", error);
     });
+});
+
+document.getElementById('autoScrollButton').addEventListener('click', function () {
+    const fixedBottom = document.getElementById('fixedBottom');
+    let scrollInterval;
+    let isAutoScrolling = false;
+
+    if (this.innerText === '▶️') {
+        this.innerText = '⏸';
+        isAutoScrolling = true;
+
+        scrollInterval = setInterval(() => {
+            if (isAutoScrolling) {
+                fixedBottom.scrollTop += 1;
+                if (fixedBottom.scrollTop === fixedBottom.scrollHeight - fixedBottom.clientHeight) {
+                    clearInterval(scrollInterval);
+                    this.innerText = '▶️';
+                }
+            }
+        }, 30);
+    } else {
+        this.innerText = '▶️';
+        isAutoScrolling = false;
+        clearInterval(scrollInterval);
+    }
+
+    fixedBottom.addEventListener('scroll', () => {
+        isAutoScrolling = false;
+    }, { once: true });
+});
+
+document.getElementById('scrollTopButton').addEventListener('click', function () {
+    document.getElementById('fixedBottom').scrollTop = 0;
 });
 
 async function initializeApp() {

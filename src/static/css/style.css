@@ -64,7 +64,7 @@ html, body {
     width: 100%;
 }
 
-.text-icon, .repeat-icon, .history-icon, .preset-icon, .settings-icon, .clients-icon {
+.text-icon, .repeat-icon, .history-icon, .preset-icon, .settings-icon, .clients-icon, .auto-scroll-icon, .scroll-top-icon {
     position: absolute;
     bottom: calc(100% + 5px);
     background: none;
@@ -85,6 +85,8 @@ html, body {
 .history-icon { left: 5px; }
 .clients-icon { left: 50px; }
 .settings-icon { left: 95px; }
+.auto-scroll-icon { right: 5px; bottom: calc(100% + 40px); }
+.scroll-top-icon { right: 50px; bottom: calc(100% + 40px); }
 
 .voice-box {
     position: absolute;
