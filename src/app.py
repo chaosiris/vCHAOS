@@ -248,6 +248,10 @@ async def save_preset(request: Request, _: None = Depends(validate_connection)):
         if not name or not prompt:
             raise HTTPException(status_code=400, detail="Both name and prompt are required.")
 
+        # Input sanitization
+        name = name.replace("<", "&lt;").replace(">", "&gt;").replace("=", "&#x3D;")
+        prompt = prompt.replace("<", "&lt;").replace(">", "&gt;").replace("=", "&#x3D;")
+
         if not os.path.exists(preset_file):
             with open(preset_file, "w", encoding="utf-8") as f:
                 json.dump([], f)

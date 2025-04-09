@@ -266,6 +266,9 @@ input:checked + .slider:before {
 }
 
 .modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
     margin-top: 10px;
 }
 
@@ -273,10 +276,10 @@ input:checked + .slider:before {
     background: rgba(255, 255, 255, 0.3);
     border: none;
     color: white;
-    padding: 8px 15px;
+    padding: 8px 16px;
+    font-size: 1rem;
     border-radius: 5px;
     cursor: pointer;
-    margin: 5px;
 }
 
 .modal-buttons button:hover {
@@ -319,12 +322,6 @@ input:checked + .slider:before {
     display: flex;
     flex-direction: column;
     gap: 15px;
-}
-
-#confirmationModal .modal-buttons {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
 }
 
 #confirmAction, #cancelAction {
@@ -533,13 +530,6 @@ canvas {
     padding: 5px;
 }
 
-.preset-modal-actions {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 10px;
-}
-
 #presetModal input,
 #presetModal textarea {
     padding: 8px;
@@ -561,15 +551,6 @@ canvas {
     resize: vertical;
     max-width: 100%;
     font-family: inherit;
-}
-
-.preset-modal-actions button {
-    padding: 8px 16px;
-    font-size: 1rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: 0.2s ease;
 }
 
 #closeHistorySidebar, #closePresetSidebar {

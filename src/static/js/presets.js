@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
+    const presetsStore = {};
     const presetSidebar = document.getElementById("presetSidebar");
     const presetButton = document.getElementById("presetButton");
     const closePresetSidebar = document.getElementById("closePresetSidebar");
@@ -16,22 +17,22 @@ document.addEventListener("DOMContentLoaded", function () {
             const presets = await response.json();
     
             presetList.innerHTML = "";
-            presets.forEach(preset => {
+            presets.forEach((preset, index) => {
                 const item = document.createElement("div");
                 item.classList.add("preset-item");
     
                 const truncatedPrompt = preset.prompt.length > 50 ? preset.prompt.substring(0, 50) + "..." : preset.prompt;
+                presetsStore[index] = preset.prompt;
     
                 item.innerHTML = `
                     <label class="preset-label">
-                        <input type="checkbox" class="preset-checkbox" data-name="${preset.name}" data-prompt="${preset.prompt}">
+                        <input type="checkbox" class="preset-checkbox" data-name="${preset.name}" data-index="${index}">
                         <button class="preset-content"> 
                             <strong>${preset.name}</strong><br>${truncatedPrompt}
                         </button>
                     </label>
                 `;
-    
-                item.querySelector(".preset-content").onclick = () => sendPreset(preset.prompt);
+                item.querySelector(".preset-content").onclick = () => sendPreset(presetsStore[index]);
                 presetList.appendChild(item);
             });
     
@@ -62,7 +63,12 @@ document.addEventListener("DOMContentLoaded", function () {
     modifyButton.addEventListener("click", () => {
         const selected = document.querySelectorAll(".preset-checkbox:checked");
         const isEdit = selected.length === 1;
-        showPresetModal(isEdit ? selected[0].dataset.name : "", isEdit ? selected[0].dataset.prompt : "");
+        const index = isEdit ? selected[0].dataset.index : null;
+    
+        showPresetModal(
+            isEdit ? selected[0].dataset.name : "",
+            isEdit && index !== null ? presetsStore[index] : ""
+        );
     });
 
     removeButton.addEventListener("click", async () => {
