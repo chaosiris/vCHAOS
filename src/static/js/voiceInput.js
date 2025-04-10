@@ -1,3 +1,5 @@
+import { sendToBackend, initHotkey } from './common.js';
+
 (async function () {
     while (!window.appSettings || Object.keys(window.appSettings).length === 0) {
         await new Promise(resolve => setTimeout(resolve, 10)); // Ensure settings are loaded first
@@ -10,61 +12,14 @@
         return;
     }
 
+    // Variables
     let mediaRecorder;
     let audioChunks = [];
     let isRecording = false;
     let stream = null;
     window.lastInputVoice = "";
 
-    voiceButton.addEventListener("pointerdown", (e) => {
-        e.preventDefault();
-
-        requestAnimationFrame(() => {
-            startRecording();
-
-            const stop = () => {
-                stopRecording();
-                window.removeEventListener("pointerup", stop);
-                window.removeEventListener("pointercancel", stop);
-            };
-
-            window.addEventListener("pointerup", stop);
-            window.addEventListener("pointercancel", stop);
-        });
-    });
-
-    document.addEventListener("keydown", function (event) {
-        if (event.repeat || event.ctrlKey || event.metaKey || isRecording) return;
-        if (event.key !== " " && event.code !== "Space") return;
-    
-        if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") return;
-    
-        const historySidebar = document.getElementById("historySidebar");
-        const clientsModal = document.getElementById("clientsModal");
-        const settingsModal = document.getElementById("settingsModal");
-        const confirmationModal = document.getElementById("confirmationModal");
-        const presetModal = document.getElementById("presetModal");
-    
-        if (
-            (historySidebar && !historySidebar.classList.contains("hidden")) ||
-            (clientsModal && !clientsModal.classList.contains("hidden")) ||
-            (settingsModal && !settingsModal.classList.contains("hidden")) ||
-            (confirmationModal && !confirmationModal.classList.contains("hidden")) ||
-            ((presetModal && !presetModal.classList.contains("hidden")))
-        ) {
-            return;
-        }
-    
-        event.preventDefault();
-        startRecording();
-    });
-    
-    document.addEventListener("keyup", function (event) {
-        if (event.key === " " || event.code === "Space") {
-            stopRecording();
-        }
-    });
-
+    // Functions
     async function startRecording() {
         if (isRecording) return;
 
@@ -130,7 +85,7 @@
                 return;
             }
 
-            await window.sendToBackend(result.transcription);
+            await sendToBackend(result.transcription);
 
             if (window.appSettings["enable-prompt-repeat"]) {
                 window.lastInputVoice = result.transcription;
@@ -146,4 +101,42 @@
             updateStatus("error");
         }
     }
+
+    // Event Listeners
+    voiceButton.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+
+        requestAnimationFrame(() => {
+            startRecording();
+
+            const stop = () => {
+                stopRecording();
+                window.removeEventListener("pointerup", stop);
+                window.removeEventListener("pointercancel", stop);
+            };
+
+            window.addEventListener("pointerup", stop);
+            window.addEventListener("pointercancel", stop);
+        });
+    });
+    
+    document.addEventListener("keyup", function (event) {
+        if (event.key === " " || event.code === "Space") {
+            stopRecording();
+        }
+    });
+
+    initHotkey({
+        key: " ",
+        modalIds: ["historySidebar", "clientsModal", "settingsModal", "confirmationModal", "presetModal"],
+        preventDefault: true,
+        actions: [
+            () => {
+                const isRecording = false;
+                if (!isRecording) {
+                    startRecording();
+                }
+            },
+        ],
+    });    
 })();

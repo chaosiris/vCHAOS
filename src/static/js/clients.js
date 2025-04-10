@@ -1,50 +1,13 @@
+import { initHotkey } from './common.js';
+
 document.addEventListener("DOMContentLoaded", function () {
+    // Variables
     const clientsButton = document.getElementById("clientsButton");
     const clientsModal = document.getElementById("clientsModal");
     const clientsList = document.getElementById("clientsList");
     const closeClients = document.getElementById("closeClients");
 
-    clientsButton.addEventListener("click", async function () {
-        clientsModal.classList.remove("hidden");
-        await loadConnectedClients();
-    });
-
-    closeClients.addEventListener("click", function () {
-        clientsModal.classList.add("hidden");
-    });
-
-    clientsModal.addEventListener("click", function (event) {
-        if (event.target === clientsModal) {
-            clientsModal.classList.add("hidden");
-        }
-    });
-
-    document.addEventListener("keydown", function (event) {
-        if (event.ctrlKey || event.metaKey) return;
-        
-        if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
-            return;
-        }
-    
-        const clientsModal = document.getElementById("clientsModal");
-        const settingsModal = document.getElementById("settingsModal");
-        const confirmationModal = document.getElementById("confirmationModal");
-        const presetModal = document.getElementById("presetModal");
-    
-        if (settingsModal && !settingsModal.classList.contains("hidden")) return;
-        if (confirmationModal && !confirmationModal.classList.contains("hidden")) return;
-        if (presetModal && !presetModal.classList.contains("hidden")) return;
-    
-        if (event.key === "c") {
-            event.preventDefault();
-            if (clientsModal.classList.contains("hidden")) {
-                clientsButton.click();
-            } else {
-                closeClients.click();
-            }
-        }
-    });
-
+    // Functions
     async function loadConnectedClients() {
         try {
             const response = await fetch("/api/clients");
@@ -99,4 +62,35 @@ document.addEventListener("DOMContentLoaded", function () {
             console.error("Error disconnecting client:", error);
         }
     }
+
+    // Event Listeners
+    clientsButton.addEventListener("click", async function () {
+        clientsModal.classList.remove("hidden");
+        await loadConnectedClients();
+    });
+
+    closeClients.addEventListener("click", function () {
+        clientsModal.classList.add("hidden");
+    });
+
+    clientsModal.addEventListener("click", function (event) {
+        if (event.target === clientsModal) {
+            clientsModal.classList.add("hidden");
+        }
+    });
+
+    initHotkey({
+        key: "c",
+        modalIds: ["settingsModal", "confirmationModal", "presetModal"],
+        actions: [
+            () => {
+                const clientsModal = document.getElementById("clientsModal");
+                if (clientsModal.classList.contains("hidden")) {
+                    document.getElementById("clientsButton").click();
+                } else {
+                    document.getElementById("closeClients").click();
+                }
+            },
+        ],
+    });    
 });

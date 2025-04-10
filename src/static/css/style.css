@@ -572,7 +572,8 @@ canvas {
     color: red; 
 }
 
-#searchButton, #closeHistorySidebar, #closePresetSidebar, #archiveButton, #deleteButton, #removeButton, #confirmAction, #cancelAction, .modal-buttons {
+#searchButton, #searchInput, #closeHistorySidebar, #closePresetSidebar, #archiveButton, #deleteButton, #removeButton, 
+#confirmAction, #cancelAction, .modal-buttons {
     user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;

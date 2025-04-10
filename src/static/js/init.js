@@ -138,7 +138,8 @@ const live2dModule = (function() {
     
         model.on("pointerup", () => {
             model.dragging = false;
-            if (!model.dragging && window.appSettings["enable-tap-motion"] && !isDrag) {
+            if (!model.dragging && window.appSettings["enable-tap-motion"] && 
+                !isDrag && !presetSidebar.classList.contains("show") && !historySidebar.classList.contains("show")) {
                 modelMotionController.tapMotion(tapMotionName, tapMotionCount);
 
                 // Resume idle motion
@@ -487,9 +488,7 @@ window.addEventListener("orientationchange", function () {
 
 // Ensure audio playing is enabled upon user interaction due to browser restrictions
 document.addEventListener("click", () => {
-    audioContext.resume().then(() => {
-        console.log("AudioContext resumed successfully.");
-    }).catch(error => {
+    audioContext.resume().catch(error => {
         console.error("Error resuming AudioContext:", error);
     });
 });
@@ -514,10 +513,22 @@ document.getElementById('autoScrollButton').addEventListener('click', function (
 });
 
 document.getElementById('scrollTopButton').addEventListener('click', function () {
-    document.getElementById('fixedBottom').scrollTo({
-        top: 0,
-        behavior: 'smooth'
-    });
+    const autoScrollButton = document.getElementById('autoScrollButton');
+
+    if (autoScrollButton.innerText === '⏸') {
+        clearInterval(autoScrollButton.dataset.scroll);
+        delete autoScrollButton.dataset.scroll;
+    }
+
+    document.getElementById('fixedBottom').scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (autoScrollButton.innerText === '⏸') {
+        setTimeout(() => {
+            autoScrollButton.dataset.scroll = setInterval(() => {
+                document.getElementById('fixedBottom').scrollTop += 1;
+            }, 30);
+        }, 500);
+    }
 });
 
 async function initializeApp() {

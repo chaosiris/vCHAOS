@@ -285,9 +285,6 @@ async def delete_presets(request: Request, _: None = Depends(validate_connection
         data = await request.json()
         names_to_delete = data.get("names", [])
 
-        if not names_to_delete:
-            raise HTTPException(status_code=400, detail="No preset names provided for deletion.")
-
         if not os.path.exists(preset_file):
             return JSONResponse({"success": False, "error": "Preset file not found"}, status_code=404)
 
@@ -299,15 +296,29 @@ async def delete_presets(request: Request, _: None = Depends(validate_connection
             except json.JSONDecodeError:
                 presets = []
 
-        filtered_presets = [p for p in presets if p["name"].lower() not in [n.lower() for n in names_to_delete]]
+        if not names_to_delete:
+            filtered_presets = []
+        else:
+            sanitized_names_to_delete = []
+            for name in names_to_delete:
+                sanitized_name = name.replace("<", "&lt;").replace(">", "&gt;").replace("=", "&#x3D;")
+                sanitized_names_to_delete.append(sanitized_name)
 
-        if len(filtered_presets) == len(presets):  
+            filtered_presets = [
+                preset for preset in presets
+                if preset["name"].lower() not in [n.lower() for n in sanitized_names_to_delete]
+            ]
+
+        if len(filtered_presets) == len(presets):
             return JSONResponse({"success": False, "error": "No matching presets found."}, status_code=404)
 
         with open(preset_file, "w", encoding="utf-8") as f:
             json.dump(filtered_presets, f, indent=4)
 
-        return {"success": True, "message": f"Deleted {len(names_to_delete)} presets successfully"}
+        total = len(presets) - len(filtered_presets)
+        total_suffix = "preset" if total == 1 else "presets"
+
+        return {"success": True, "message": f"Deleted {total} {total_suffix} successfully."}
 
     except Exception as e:
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)

@@ -1,4 +1,7 @@
+import { initHotkey } from './common.js';
+
 document.addEventListener("DOMContentLoaded", async function () {
+    // Variables
     const settingsButton = document.getElementById("settingsButton");
     const settingsModal = document.getElementById("settingsModal");
     const applySettings = document.getElementById("applySettings");
@@ -15,12 +18,13 @@ document.addEventListener("DOMContentLoaded", async function () {
     const timeoutInput = document.getElementById("timeoutInput");
     const modelInput = document.getElementById("modelInput");
 
-    initModelName = "";
-    initVoiceInput = "";
-    initIdleMotion = "";
+    let initModelName = "";
+    let initVoiceInput = "";
+    let initIdleMotion = "";
     window.appSettings = {};
     await loadSettings();
 
+    // Functions
     async function loadSettings() {
         try {
             const response = await fetch("/api/get_settings");
@@ -58,6 +62,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
     }
 
+    // Event Listeners
     settingsButton.addEventListener("click", async function () {
         showSentPrompts.checked = window.appSettings["show-sent-prompts"];
         enableIdleMotion.checked = window.appSettings["enable-idle-motion"];
@@ -73,33 +78,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         initIdleMotion = enableIdleMotion.checked;
         initVoiceInput = enableVoiceInput.checked;
         settingsModal.classList.remove("hidden");
-        console.log(initVoiceInput);
-    });
-
-    document.addEventListener("keydown", function (event) {
-        if (event.ctrlKey || event.metaKey) return;
-
-        if (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA") {
-            return;
-        }
-    
-        const clientsModal = document.getElementById("clientsModal");
-        const settingsModal = document.getElementById("settingsModal");
-        const confirmationModal = document.getElementById("confirmationModal");
-        const presetModal = document.getElementById("presetModal");
-    
-        if (clientsModal && !clientsModal.classList.contains("hidden")) return;
-        if (confirmationModal && !confirmationModal.classList.contains("hidden")) return;
-        if (presetModal && !presetModal.classList.contains("hidden")) return;
-    
-        if (event.key === "s") {
-            event.preventDefault();
-            if (settingsModal.classList.contains("hidden")) {
-                settingsButton.click();
-            } else {
-                cancelSettings.click();
-            }
-        }
     });
 
     timeoutInput.addEventListener("input", function () {
@@ -190,4 +168,19 @@ document.addEventListener("DOMContentLoaded", async function () {
             settingsModal.classList.add("hidden");
         }
     });
+
+    initHotkey({
+        key: "s",
+        modalIds: ["clientsModal", "confirmationModal", "presetModal"],
+        actions: [
+            () => {
+                const settingsModal = document.getElementById("settingsModal");
+                if (settingsModal.classList.contains("hidden")) {
+                    document.getElementById("settingsButton").click();
+                } else {
+                    document.getElementById("cancelSettings").click();
+                }
+            },
+        ],
+    });    
 });
