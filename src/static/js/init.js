@@ -8,16 +8,24 @@ let isSpeaking = false;
 let idleLoopTimeout = null;
 let modelDefaultParams = {};
 
+// Lip Sync Variables
+const mouthParamNames = [
+    "ParamMouthOpenY",
+    "ParamMouthOpen",
+    "PARAM_MOUTH_OPEN_Y",
+]; // Add more to the list if necessary/using custom param name
+let mouthParamId = null;
+let mouthParamMax = 1;
+let mouthParamMin = 0;
+
 // Audio Player Variables
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let audioSourceNode = null;
 let analyser = null;
 let dataArray = null;
-let mouthParamId = null;
-let mouthParamMax = 1;
-let mouthParamMin = 0;
 let audioPlayer = document.getElementById("audioPlayer");
 
+// Live2D initialization
 const live2dModule = (function() {
     const live2d = PIXI.live2d;
 
@@ -51,6 +59,9 @@ const live2dModule = (function() {
                 (app.view.height / 2) + (modelInfo.yOffset || 0)
             );
 
+            // Clear pre-configured idle motion (if defined)
+            model2.internalModel.motionManager.groups.idle = null;
+
             if (!window.appSettings["enable-idle-motion"]) {
                 enableHeadTracking(model2);
             }
@@ -79,85 +90,6 @@ const live2dModule = (function() {
             console.error("Error loading Live2D model:", error);
         }
     }
-    
-    function enableHeadTracking(model) {
-        if (!model || !model.internalModel) return;
-    
-        let focusX = 0, focusY = 0;
-        let targetX = 0, targetY = 0;
-        let velocityX = 0, velocityY = 0;
-        const smoothFactor = 0.08;
-        const accelerationFactor = 1;
-
-        model.interactive = true;
-        model.on("pointermove", (event) => {
-            targetX = (event.data.global.x / window.innerWidth) * 2 - 1;
-            targetY = (event.data.global.y / window.innerHeight) * 2 - 1;
-        });
-    
-        function updateHeadMovement() {
-            const dx = targetX - focusX;
-            const dy = targetY - focusY;
-    
-            velocityX += dx * accelerationFactor;
-            velocityY += dy * accelerationFactor;
-    
-            velocityX *= smoothFactor;
-            velocityY *= smoothFactor;
-    
-            focusX += velocityX * 16;
-            focusY += velocityY * 16;
-    
-            model.internalModel.coreModel.setParameterValueById("ParamAngleX", focusX * 30);
-            model.internalModel.coreModel.setParameterValueById("ParamAngleY", focusY * -30);
-    
-            requestAnimationFrame(updateHeadMovement);
-        }
-
-        updateHeadMovement();
-    }
-
-    function enablePointerEvents(model, idleMotionName, idleMotionCount, tapMotionName, tapMotionCount) {
-        let isDrag = false;
-        model.buttonMode = true;
-    
-        model.on("pointerdown", (e) => {
-            model.dragging = true;
-            model._pointerX = e.data.global.x - model.x;
-            model._pointerY = e.data.global.y - model.y;
-
-        });
-    
-        model.on("pointermove", (e) => {
-            if (model.dragging) {
-                model.position.x = e.data.global.x - model._pointerX;
-                model.position.y = e.data.global.y - model._pointerY;
-                isDrag = true;
-            }
-        });
-    
-        model.on("pointerup", () => {
-            model.dragging = false;
-            if (!model.dragging && window.appSettings["enable-tap-motion"] && 
-                !isDrag && !presetSidebar.classList.contains("show") && !historySidebar.classList.contains("show")) {
-                modelMotionController.tapMotion(tapMotionName, tapMotionCount);
-
-                // Resume idle motion
-                const checkMotionInterval = setInterval(() => {
-                    if (!model2?.internalModel?.motionState?.isActive(tapMotionName, tapMotionCount)) {
-                        const randomIndex = idleMotionCount === 1 ? 0 : Math.floor(Math.random() * idleMotionCount);
-                        clearInterval(checkMotionInterval);
-                        modelMotionController.loopIdle(idleMotionName, randomIndex);
-                    }
-                }, 100);
-            }
-            isDrag = false;
-        });
-    
-        model.on("pointerupoutside", () => {
-            model.dragging = false;
-        });
-    }
 
     return {
         init,
@@ -165,6 +97,7 @@ const live2dModule = (function() {
     };
 })();
 
+// Model motion controller class
 const modelMotionController = {
     stopAll() {
         model2?.internalModel?.motionManager?.stopAllMotions();
@@ -206,6 +139,92 @@ const modelMotionController = {
     }
 };
 
+// Model interaction functions
+function enableHeadTracking(model) {
+    if (!model || !model.internalModel) return;
+
+    let focusX = 0, focusY = 0;
+    let targetX = 0, targetY = 0;
+    let velocityX = 0, velocityY = 0;
+    const smoothFactor = 0.08;
+    const accelerationFactor = 1;
+
+    model.interactive = true;
+    model.on("pointermove", (event) => {
+        targetX = (event.data.global.x / window.innerWidth) * 2 - 1;
+        targetY = (event.data.global.y / window.innerHeight) * 2 - 1;
+    });
+
+    function updateHeadMovement() {
+        const dx = targetX - focusX;
+        const dy = targetY - focusY;
+
+        velocityX += dx * accelerationFactor;
+        velocityY += dy * accelerationFactor;
+
+        velocityX *= smoothFactor;
+        velocityY *= smoothFactor;
+
+        focusX += velocityX * 16;
+        focusY += velocityY * 16;
+
+        if (typeof model.internalModel.coreModel.setParameterValueById === "function") {
+            model.internalModel.coreModel.setParameterValueById("ParamAngleX", focusX * 30);
+            model.internalModel.coreModel.setParameterValueById("ParamAngleY", focusY * -30);
+        } else {
+            model.internalModel.coreModel.setParamFloat("ParamAngleX", focusX * 30);
+            model.internalModel.coreModel.setParamFloat("ParamAngleY", focusY * -30);
+        }
+
+        requestAnimationFrame(updateHeadMovement);
+    }
+
+    updateHeadMovement();
+}
+
+function enablePointerEvents(model, idleMotionName, idleMotionCount, tapMotionName, tapMotionCount) {
+    let isDrag = false;
+    model.buttonMode = true;
+
+    model.on("pointerdown", (e) => {
+        model.dragging = true;
+        model._pointerX = e.data.global.x - model.x;
+        model._pointerY = e.data.global.y - model.y;
+
+    });
+
+    model.on("pointermove", (e) => {
+        if (model.dragging) {
+            model.position.x = e.data.global.x - model._pointerX;
+            model.position.y = e.data.global.y - model._pointerY;
+            isDrag = true;
+        }
+    });
+
+    model.on("pointerup", () => {
+        model.dragging = false;
+        if (!model.dragging && window.appSettings["enable-tap-motion"] && 
+            !isDrag && !presetSidebar.classList.contains("show") && !historySidebar.classList.contains("show")) {
+            modelMotionController.tapMotion(tapMotionName, tapMotionCount);
+
+            // Resume idle motion
+            const checkMotionInterval = setInterval(() => {
+                if (!model2?.internalModel?.motionState?.isActive(tapMotionName, tapMotionCount)) {
+                    const randomIndex = idleMotionCount === 1 ? 0 : Math.floor(Math.random() * idleMotionCount);
+                    clearInterval(checkMotionInterval);
+                    modelMotionController.loopIdle(idleMotionName, randomIndex);
+                }
+            }, 100);
+        }
+        isDrag = false;
+    });
+
+    model.on("pointerupoutside", () => {
+        model.dragging = false;
+    });
+}
+
+// Main WebSocket function
 function connectWebSocket() {
     if (manualDisconnect) return;
 
@@ -256,6 +275,8 @@ function connectWebSocket() {
 
         if (!manualDisconnect) {
             setTimeout(connectWebSocket, 5000);
+        } else {
+            wsStatus.textContent = "Manually Disconnected";
         }
     };
 
@@ -270,7 +291,6 @@ function connectWebSocket() {
         }
 
         if (event.data === "disconnect_client") {
-            console.log("Received forced disconnect from server.");
             manualDisconnect = true;
             disconnectWebSocket();
             return;
@@ -299,6 +319,7 @@ function connectWebSocket() {
 
             var audioFilePath = window.location.origin + data.audio_file;
             var textFilePath = audioFilePath.replace(".wav", ".txt");
+            let textContent = '';
 
             fetch(textFilePath)
                 .then(response => response.ok ? response.text() : Promise.reject("Text file not found"))
@@ -308,7 +329,7 @@ function connectWebSocket() {
                 })
                 .then(response => response.ok ? response.blob() : Promise.reject("Audio file not found"))
                 .then(blob => {
-                    audioUrl = URL.createObjectURL(blob);
+                    let audioUrl = URL.createObjectURL(blob);
 
                     const textPrefix = document.getElementById("textDisplay").querySelector("strong");
                     textPrefix.textContent = "Latest Response:";
@@ -332,6 +353,7 @@ function connectWebSocket() {
                 .catch(error => {
                     console.error("Failed to load files:", error);
                     textOutput.innerText = "No text response provided by LLM. Please check your connection or try resending your prompt!";
+                    textOutput.innerText += "\nError message: " + error;
                 });
         }
     };
@@ -339,18 +361,15 @@ function connectWebSocket() {
 
 function disconnectWebSocket() {
     if (socket) {
-        console.log("Manually disconnecting WebSocket.");
+        console.log("This client's WebSocket has been manually and permanently disconnected. Please refresh to reconnect.");
         socket.close(1000);
     }
 }
 
+// Lip sync functions
 function playAudioLipSync(audioUrl) {
-    if (!model2) {
-        console.error("Live2D model not loaded. Cannot play animation.");
-        return;
-    }
+    if (!model2) return console.error("Live2D model not loaded.");
 
-    // Stop idle motion and reset to default state
     if (window.appSettings["enable-idle-motion"]) {
         isSpeaking = true;
         modelMotionController.stopAll();
@@ -358,74 +377,49 @@ function playAudioLipSync(audioUrl) {
     }
 
     let audioSource = document.getElementById("audioSource");
-
-    if (!audioPlayer || !audioSource) {
-        console.error("Audio elements missing.");
-        return;
-    }
+    if (!audioPlayer || !audioSource) return console.error("Audio elements missing.");
 
     if (audioPlayer.src !== audioUrl) {
         audioSource.src = audioUrl;
         audioPlayer.load();
     }
-
-    if (audioPlayer.paused) {
-        audioPlayer.play().catch(error => console.error("Audio playback error:", error));
-    }
+    audioPlayer.paused && audioPlayer.play().catch(error => console.error("Audio playback error:", error));
 
     if (!audioSourceNode) {
         audioSourceNode = audioContext.createMediaElementSource(audioPlayer);
         analyser = audioContext.createAnalyser();
-
         audioSourceNode.connect(analyser);
         analyser.connect(audioContext.destination);
         analyser.fftSize = 512;
-
-        const bufferLength = analyser.frequencyBinCount;
-        dataArray = new Uint8Array(bufferLength);
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
     }
 
     function animateMouth() {
         if (!analyser || !mouthParamId) return;
 
-        let mouthMovement = 0;
-        if (window.appSettings["enable-mouth-scaling"]) {
-            analyser.getByteFrequencyData(dataArray);
-    
-            let startFreq = Math.floor(85 / (audioContext.sampleRate / analyser.fftSize));
-            let endFreq = Math.floor(255 / (audioContext.sampleRate / analyser.fftSize));
-        
-            let maxEnergy = 0;
-        
-            for (let i = startFreq; i < endFreq; i++) {
-                if (dataArray[i] > maxEnergy) {
-                    maxEnergy = dataArray[i];
-                }
-            }
+        const startFreq = Math.floor(85 / (audioContext.sampleRate / analyser.fftSize));
+        const endFreq = Math.floor(255 / (audioContext.sampleRate / analyser.fftSize));
 
-            mouthMovement = mouthParamMin + (Math.pow(Math.max(0, Math.min(1, maxEnergy / 255)), 1.2) * (mouthParamMax - mouthParamMin));
-        } else {
-            mouthMovement = mouthParamMax;
-        }
-    
-        requestAnimationFrame(() => {
+        analyser.getByteFrequencyData(dataArray);
+        const maxEnergy = Math.max(...dataArray.slice(startFreq, endFreq));
+        const mouthMovement = window.appSettings["enable-mouth-scaling"]
+            ? mouthParamMin + Math.pow(Math.max(0, Math.min(1, maxEnergy / 255)), 1.2) * (mouthParamMax - mouthParamMin)
+            : mouthParamMax;
+
+        const setMouthParam = (value) => {
             if (typeof model2.internalModel.coreModel.setParameterValueById === "function") {
-                model2.internalModel.coreModel.setParameterValueById(mouthParamId, mouthMovement);
+                model2.internalModel.coreModel.setParameterValueById(mouthParamId, value);
             } else {
-                model2.internalModel.coreModel.setParamFloat("PARAM_MOUTH_OPEN_Y", mouthMovement);
+                model2.internalModel.coreModel.setParamFloat("PARAM_MOUTH_OPEN_Y", value);
             }
-        });
-    
+        };
+
+        setMouthParam(mouthMovement);
+
         if (!audioPlayer.paused) {
             requestAnimationFrame(animateMouth);
         } else {
-            requestAnimationFrame(() => {
-                if (typeof model2.internalModel.coreModel.setParameterValueById === "function") {
-                    model2.internalModel.coreModel.setParameterValueById(mouthParamId, 0);
-                } else {
-                    model2.internalModel.coreModel.setParamFloat("PARAM_MOUTH_OPEN_Y", 0);
-                }
-            });
+            setMouthParam(0);
             if (window.appSettings["enable-idle-motion"]) {
                 isSpeaking = false;
                 setTimeout(() => modelMotionController.loopIdle(), 3000);
@@ -443,11 +437,13 @@ function getMouthOpenParam(model) {
     }
 
     let allParams = model.internalModel.coreModel._parameterIds || model.internalModel.coreModel.parameters.ids;
-    let detectedParam = allParams.find(param => param.startsWith("ParamMouthOpenY")) || 
-                        allParams.find(param => param.startsWith("ParamMouthOpen"));
+    let detectedParam = allParams.find(param =>
+        mouthParamNames.some(listParam => param.toLowerCase() === listParam.toLowerCase())
+    );
     return detectedParam || "ParamMouthOpenY";
 }
 
+// Event Listeners
 audioPlayer.addEventListener("play", function () {
     playAudioLipSync(audioPlayer.src);
 });
@@ -531,6 +527,7 @@ document.getElementById('scrollTopButton').addEventListener('click', function ()
     }
 });
 
+// Begin app initialization
 async function initializeApp() {
     while (!window.appSettings || Object.keys(window.appSettings).length === 0) {
         await new Promise(resolve => setTimeout(resolve, 10)); // Ensure settings are loaded first
