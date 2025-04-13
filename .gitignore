@@ -1,6 +1,9 @@
-data
-tmp
-output
+src/archived
+src/data
 src/live2d_models
+src/output
+src/tmp
+src/__pycache__
 src/key.pem
 src/cert.pem
+src/routes/__pycache__
