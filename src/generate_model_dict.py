@@ -1,9 +1,13 @@
 import os
 import json
 
-BASE_DIRECTORY = './live2d_models'
+LIVE2D_DIR = './live2d_models'
 
 def generate_model_dict(base_dir):
+    """
+    Generate/Update model_dict.json according to the latest Live2D models available in ./live2d_models.
+    NOTE: idleMotion and tapMotion names are case-sensitive (has to be exactly same as the values in *.model3.json)!
+    """
     model_dict = []
 
     if os.path.exists("model_dict.json"):
@@ -11,7 +15,7 @@ def generate_model_dict(base_dir):
             with open("model_dict.json", "r", encoding="utf-8") as file:
                 model_dict = json.load(file)
         except json.JSONDecodeError:
-            print("model_dict.json is empty or invalid. Initializing a new list.")
+            print("> model_dict.json is empty or invalid. Initializing a new list.")
 
     for root, dirs, files in os.walk(base_dir):
         if root == base_dir:
@@ -47,5 +51,5 @@ def generate_model_dict(base_dir):
         json.dump(model_dict, file, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
-    generate_model_dict(BASE_DIRECTORY)
-    print("model_dict.json has been updated.")
+    generate_model_dict(LIVE2D_DIR)
+    print("> model_dict.json has been updated.")

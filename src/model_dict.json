@@ -1,8 +1,24 @@
 [
     {
-        "name": "shizuku",
-        "file_path": "/live2d_models/shizuku/shizuku.model3.json",
-        "kScale": 0.2,
-        "idleMotion": "idle"
+        "name": "haru_greeter_t05",
+        "file_path": "./live2d_models/haru/runtime/haru_greeter_t05.model3.json",
+        "kScale": 0.25,
+        "xOffset": 0,
+        "yOffset": 200,
+        "idleMotion": "",
+        "idleMotionCount": 1,
+        "tapMotion": "",
+        "tapMotionCount": 27
+    },
+    {
+        "name": "hiyori_free_t08",
+        "file_path": "./live2d_models/hiyori/runtime/hiyori_free_t08.model3.json",
+        "kScale": 0.25,
+        "xOffset": 0,
+        "yOffset": 200,
+        "idleMotion": "Idle",
+        "idleMotionCount": 1,
+        "tapMotion": "Tap",
+        "tapMotionCount": 1
     }
 ]
