@@ -57,7 +57,7 @@ async def save_preset(request: Request, _: None = Depends(validate_connection)):
         prompt = data.get("prompt", "").strip()
 
         if not name or not prompt:
-            raise HTTPException(status_code=400, detail="Both name and prompt are required.")
+            return JSONResponse({"success": False, "error": "Both name and prompt are required."}, status_code=400)
 
         # Input sanitization
         name = name.replace("<", "&lt;").replace(">", "&gt;").replace("=", "&#x3D;")

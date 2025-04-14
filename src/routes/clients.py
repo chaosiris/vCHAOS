@@ -11,9 +11,9 @@ from routes.utils import validate_connection
 
 router = APIRouter()
 
-settings = load_settings()
-LOG_LEVEL = settings.get("backend", {}).get("logging", {}).get("level", "ERROR").upper()
-SAVE_CHAT_HISTORY = bool(settings.get("frontend", {}).get("save-chat-history", True))
+config = load_settings()
+LOG_LEVEL = config.get("backend", {}).get("logging", {}).get("level", "ERROR").upper()
+SAVE_CHAT_HISTORY = bool(config.get("frontend", {}).get("save-chat-history", True))
 
 # Initialize logging framework
 logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s: %(message)s")
@@ -47,22 +47,22 @@ async def websocket_endpoint(websocket: WebSocket):
         connected_clients.discard(client)
 
     connected_clients.add((websocket, client_ip))
-    logging.info(f"Client {client_ip} connected")
+    logger.info(f"Client {client_ip} connected")
 
     try:
         while True:
             try:
                 message = await asyncio.wait_for(websocket.receive_text(), timeout=60)
-                logging.info(f"Received WebSocket message from {client_ip}: {message}")
+                logger.info(f"Received WebSocket message from {client_ip}: {message}")
 
                 if not SAVE_CHAT_HISTORY:
                     if message.startswith("ack:"):
                         file_id = message.split("ack:")[1].strip()
-                        logging.debug(f"Received acknowledgment for file ID: {file_id}")
+                        logger.debug(f"Received acknowledgment for file ID: {file_id}")
 
                         if file_id in pending_deletions:
                             pending_deletions[file_id]["acknowledged_clients"].add(client_ip)
-                            logging.debug(f"Acknowledged clients: {pending_deletions[file_id]['acknowledged_clients']}")
+                            logger.debug(f"Acknowledged clients: {pending_deletions[file_id]['acknowledged_clients']}")
 
                             if len(pending_deletions[file_id]["acknowledged_clients"]) >= len(connected_clients):
                                 files_to_delete = {k: v for k, v in pending_deletions.pop(file_id, {}).items() if k != "acknowledged_clients"}
@@ -72,14 +72,14 @@ async def websocket_endpoint(websocket: WebSocket):
             except asyncio.TimeoutError:
                 await websocket.send_text("ping") # Keep-alive ping
     except (WebSocketDisconnect, ConnectionResetError):
-        logging.info(f"Client {client_ip} disconnected")
+        logger.info(f"Client {client_ip} disconnected")
     except asyncio.CancelledError:
-        logging.warning(f"WebSocket connection for {client_ip} was cancelled")
+        logger.warning(f"WebSocket connection for {client_ip} was cancelled")
     except Exception as e:
-        logging.error(f"Unexpected WebSocket error for {client_ip}: {e}")
+        logger.error(f"Unexpected WebSocket error for {client_ip}: {e}")
     finally:
         connected_clients.discard((websocket, client_ip))
-        logging.info(f"Cleaned up WebSocket connection for {client_ip}")
+        logger.info(f"Cleaned up WebSocket connection for {client_ip}")
 
 @router.get("/api/clients")
 async def get_connected_clients(_: None = Depends(validate_connection)):

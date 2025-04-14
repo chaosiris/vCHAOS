@@ -18,6 +18,22 @@ from routes import settings, clients, chatHistory, presets
 from routes.globals import connected_clients, pending_deletions
 from routes.utils import validate_connection
 
+# Load constants from settings.yaml
+config = settings.load_settings()
+HOST = config.get("backend", {}).get("app", {}).get("host", "0.0.0.0")
+PORT = config.get("backend", {}).get("app", {}).get("port", 11405)
+PROTOCOL = config.get("backend", {}).get("app", {}).get("protocol", "http")
+LOG_LEVEL = config.get("backend", {}).get("logging", {}).get("level", "INFO").upper()
+OLLAMA_WEBHOOK = config.get("urls", {}).get("ollama_webhook", "http://homeassistant.local:8123/api/webhook/ollama_chat")
+WHISPER_HOST = config.get("backend", {}).get("urls", {}).get("whisper_host", "127.0.0.1")
+WHISPER_PORT = config.get("backend", {}).get("urls", {}).get("whisper_port", 10300)
+SAVE_CHAT_HISTORY = bool(config.get("frontend", {}).get("save-chat-history", True))
+TIMEOUT_DURATION = config.get("frontend", {}).get("timeout", 180)
+
+# Initialize logging framework
+logging.basicConfig(level=LOG_LEVEL, format="[vCHAOS] (%(levelname)s) %(message)s")
+logger = logging.getLogger(__name__)
+
 # Using lifespan context manager for startup/shutdown event handling
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,7 +52,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    print("App is shutting down...")
+    logger.info("App is shutting down...")
 
 # Using FastAPI/WebSockets + Uvicorn for real-time communication
 app = FastAPI(lifespan=lifespan)
@@ -52,22 +68,6 @@ app.include_router(presets.router)
 app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 app.mount("/live2d_models", StaticFiles(directory="live2d_models"), name="live2d_models")
 app.mount("/output", StaticFiles(directory="output"), name="output")
-
-# Load constants from settings.yaml
-config = settings.load_settings()
-HOST = config.get("backend", {}).get("app", {}).get("host", "0.0.0.0")
-PORT = config.get("backend", {}).get("app", {}).get("port", 11405)
-PROTOCOL = config.get("backend", {}).get("app", {}).get("protocol", "http")
-LOG_LEVEL = settings.get("backend", {}).get("logging", {}).get("level", "ERROR").upper()
-OLLAMA_WEBHOOK = config.get("urls", {}).get("ollama_webhook", "http://homeassistant.local:8123/api/webhook/ollama_chat")
-WHISPER_HOST = config.get("backend", {}).get("urls", {}).get("whisper_host", "127.0.0.1")
-WHISPER_PORT = config.get("backend", {}).get("urls", {}).get("whisper_port", 10300)
-SAVE_CHAT_HISTORY = bool(config.get("frontend", {}).get("save-chat-history", True))
-TIMEOUT_DURATION = config.get("frontend", {}).get("timeout", 180)
-
-# Initialize logging framework
-logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s: %(message)s")
-logger = logging.getLogger(__name__)
 
 @app.get("/")
 async def serve_root():
@@ -90,8 +90,8 @@ async def send_prompt(request: Request, _: None = Depends(validate_connection)):
 
     Returns:
         JSONResponse: Success message and input text if processed successfully.
-        400 error if input text is empty.
-        500 error for further exceptions.
+        Always returns 200 OK status code to ensure graceful handling.
+        If an exception occurs, an error message will be returned.
     """
     try:
         data = await request.json()
@@ -263,6 +263,8 @@ def suppress_asyncio_error():
 
 if __name__ == "__main__":
     if PROTOCOL == "https":
+        logger.info(f"Starting app on {PROTOCOL}://{HOST}:{PORT}")
         uvicorn.run(app, host=HOST, port=PORT, log_level=LOG_LEVEL.lower(), ssl_keyfile="key.pem", ssl_certfile="cert.pem")
     else:
+        logger.info(f"Starting app on {PROTOCOL}://{HOST}:{PORT}")
         uvicorn.run(app, host=HOST, port=PORT, log_level=LOG_LEVEL.lower())

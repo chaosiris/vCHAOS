@@ -153,6 +153,6 @@ async def process_chat_history(action: str, filenames: list[str] = None):
         "message": (
             f"{action.capitalize()}d {total} chat history files "
             f"({wav_count} .wav, {txt_count} .txt)."
-            if total else f"No valid chat history files found to {action}."
+            if total else f"No valid chat history files to {action}."
         )
     }

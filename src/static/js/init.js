@@ -489,22 +489,26 @@ document.addEventListener("click", () => {
     });
 });
 
-document.getElementById('autoScrollButton').addEventListener('click', function () {
-    let scrollInterval;
+let scrollInterval = null;
+document.getElementById("autoScrollButton").addEventListener("click", function () {
+    const scrollContainer = document.getElementById("fixedBottom");
 
-    if (this.innerText === '▶️') {
-        this.innerText = '⏸';
+    if (this.innerText === "▶️") {
+        this.innerText = "⏸";
+
+        if (scrollInterval) {
+            clearInterval(scrollInterval); // Clear previous interval before starting a new one
+        }
 
         scrollInterval = setInterval(() => {
-            document.getElementById('fixedBottom').scrollTop += 1;
+            scrollContainer.scrollTop += 1;
         }, 30);
-
-        this.dataset.scroll = scrollInterval;
+        
     } else {
-        this.innerText = '▶️';
+        this.innerText = "▶️";
 
-        clearInterval(this.dataset.scroll);
-        delete this.dataset.scroll;
+        clearInterval(scrollInterval);
+        scrollInterval = null;
     }
 });
 

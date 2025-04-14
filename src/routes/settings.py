@@ -2,7 +2,7 @@
 import json
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from routes.utils import validate_connection, validate_settings
+from routes.utils import validate_connection
 from ruamel.yaml import YAML
 
 yaml = YAML()
@@ -30,6 +30,30 @@ def load_settings(file_path=settings_file):
     except FileNotFoundError:
         print("Error: settings.yaml not found, using defaults.")
         return {}
+
+def validate_settings(data):
+    """
+    Validates received data when updating settings to ensure correct file structure and data type.
+    Args:
+        data (dict): JSON object containing the updated settings.
+    """
+    current_settings = load_settings()
+
+    for category, settings in data.items():
+        if category not in current_settings:
+            raise HTTPException(status_code=400, detail=f"Invalid category: {category}")
+
+        for key, value in settings.items():
+            if key not in current_settings[category]:
+                raise HTTPException(status_code=400, detail=f"Invalid setting: {key}")
+
+            expected_type = type(current_settings[category][key])
+            if not isinstance(value, expected_type):
+                raise HTTPException(status_code=400, detail=f"Invalid type for {key}: Expected {expected_type.__name__}, got {type(value).__name__}")
+
+            if category == "frontend" and key == "timeout":
+                if not (30 <= value <= 600):
+                    raise HTTPException(status_code=400, detail="Timeout value must be between 30 and 600")
 
 @router.get("/api/get_settings")
 async def get_settings():
@@ -64,8 +88,8 @@ async def update_settings(request: Request, _: None = Depends(validate_connectio
 
     Returns:
         JSONResponse: Success message if update is successful.
-        400 error if validate_settings() fails.
-        500 error for further exceptions.
+        Always returns 200 OK status code to ensure graceful handling.
+        If an exception occurs, an error message will be returned.
     """
     try:
         data = await request.json()
@@ -75,8 +99,6 @@ async def update_settings(request: Request, _: None = Depends(validate_connectio
         for key, value in data.items():
             if isinstance(value, dict) and key in yaml_data:
                 yaml_data[key].update(value)
-            else:
-                yaml_data[key] = value
 
         with open(settings_file, "w", encoding="utf-8") as f:
             yaml.dump(yaml_data, f)

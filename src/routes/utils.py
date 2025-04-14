@@ -1,30 +1,7 @@
 # routes/utils.py
+import os
 from fastapi import Request, HTTPException
 from routes.globals import connected_clients
-
-def validate_settings(data):
-    """
-    Validates received data when updating settings to ensure correct file structure and data type.
-    Args:
-        data (dict): JSON object containing the updated settings.
-    """
-    current_settings = load_settings()
-
-    for category, settings in data.items():
-        if category not in current_settings:
-            raise HTTPException(status_code=400, detail=f"Invalid category: {category}")
-
-        for key, value in settings.items():
-            if key not in current_settings[category]:
-                raise HTTPException(status_code=400, detail=f"Invalid setting: {key}")
-
-            expected_type = type(current_settings[category][key])
-            if not isinstance(value, expected_type):
-                raise HTTPException(status_code=400, detail=f"Invalid type for {key}: Expected {expected_type.__name__}, got {type(value).__name__}")
-
-            if category == "frontend" and key == "timeout":
-                if not (30 <= value <= 600):
-                    raise HTTPException(status_code=400, detail="Timeout value must be between 30 and 600")
 
 def validate_connection(request: Request):
     """
