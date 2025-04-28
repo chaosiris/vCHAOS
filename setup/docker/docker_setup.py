@@ -3,8 +3,8 @@ import subprocess
 import platform
 
 commands = [
-    "docker-compose -f piper-compose.yaml up -d",
-    "docker-compose -f whisper-compose.yaml up -d"
+    "docker-compose -p vchaos -f piper-compose.yaml up -d",
+    "docker-compose -p vchaos -f whisper-compose.yaml up -d"
 ]
 
 def is_docker_running():

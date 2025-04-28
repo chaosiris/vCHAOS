@@ -492,6 +492,7 @@ document.addEventListener("click", () => {
 });
 
 let scrollInterval = null;
+let scrollTimeout = null;
 document.getElementById("autoScrollButton").addEventListener("click", function () {
     const scrollContainer = document.getElementById("fixedBottom");
 
@@ -499,7 +500,7 @@ document.getElementById("autoScrollButton").addEventListener("click", function (
         this.innerText = "⏸";
 
         if (scrollInterval) {
-            clearInterval(scrollInterval); // Clear previous interval before starting a new one
+            clearInterval(scrollInterval);
         }
 
         scrollInterval = setInterval(() => {
@@ -514,23 +515,37 @@ document.getElementById("autoScrollButton").addEventListener("click", function (
     }
 });
 
-document.getElementById('scrollTopButton').addEventListener('click', function () {
+function scrollToPosition(position) {
     const autoScrollButton = document.getElementById('autoScrollButton');
+    const scrollContainer = document.getElementById('fixedBottom');
 
     if (autoScrollButton.innerText === '⏸') {
-        clearInterval(autoScrollButton.dataset.scroll);
-        delete autoScrollButton.dataset.scroll;
+        clearInterval(scrollInterval);
+        scrollInterval = null;
     }
 
-    document.getElementById('fixedBottom').scrollTo({ top: 0, behavior: 'smooth' });
+    if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+    }
+
+    scrollContainer.scrollTo({ top: position, behavior: 'smooth' });
 
     if (autoScrollButton.innerText === '⏸') {
-        setTimeout(() => {
-            autoScrollButton.dataset.scroll = setInterval(() => {
-                document.getElementById('fixedBottom').scrollTop += 1;
+        scrollTimeout = setTimeout(() => {
+            scrollInterval = setInterval(() => {
+                scrollContainer.scrollTop += 1;
             }, 30);
         }, 500);
     }
+}
+
+document.getElementById('scrollTopButton').addEventListener('click', function () {
+    scrollToPosition(0);
+});
+
+document.getElementById('scrollTopButton').addEventListener('dblclick', function () {
+    const scrollContainer = document.getElementById('fixedBottom');
+    scrollToPosition(scrollContainer.scrollHeight);
 });
 
 // Begin app initialization
