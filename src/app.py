@@ -1,5 +1,6 @@
 # app.py
 import os
+import io
 import json
 import asyncio
 import uvicorn
@@ -7,6 +8,7 @@ import httpx
 import logging
 import subprocess
 import socket
+import wave
 from contextlib import asynccontextmanager
 from wyoming.client import AsyncTcpClient
 from wyoming.audio import AudioChunk, AudioStop
@@ -119,33 +121,14 @@ async def send_prompt(request: Request, _: None = Depends(validate_connection)):
 
 @app.post("/api/send_voice")
 async def send_voice(audio: UploadFile = File(...), _: None = Depends(validate_connection)):
-    """
-    Process and transcribe audio input via Wyoming Faster-Whisper.
-
-    Args:
-        audio (UploadFile): Audio file recorded by the client via frontend Push-To-Talk button.
-        _: None: Validates whether request originates from an active WebSocket client.
-
-    Returns:
-        JSONResponse: Returns transcribed text in JSON format if successful.
-        500 error for further exceptions.
-    """
     try:
         input_bytes = await audio.read()
 
-        ffmpeg_process = await asyncio.create_subprocess_exec(
-            "ffmpeg", "-i", "pipe:0",
-            "-f", "wav", "-ar", "16000", "-ac", "1", "-sample_fmt", "s16",
-            "pipe:1",
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL
-        )
-
-        stdout, _ = await ffmpeg_process.communicate(input=input_bytes)
-
-        if ffmpeg_process.returncode != 0:
-            raise RuntimeError("FFmpeg failed to convert audio")
+        # Process the input .wav file
+        wav_buffer = io.BytesIO(input_bytes)
+        with wave.open(wav_buffer, "rb") as wf:
+            frames = wf.readframes(wf.getnframes())
+            params = wf.getparams()
 
         # Send to Faster-Whisper backend
         async with AsyncTcpClient(WHISPER_HOST, WHISPER_PORT) as client:
@@ -153,12 +136,12 @@ async def send_voice(audio: UploadFile = File(...), _: None = Depends(validate_c
 
             chunk_size = 4096
             offset = 0
-            while offset < len(stdout):
+            while offset < len(frames):
                 chunk = AudioChunk(
-                    rate=16000,
-                    width=2,
-                    channels=1,
-                    audio=stdout[offset:offset+chunk_size]
+                    rate=params.framerate,
+                    width=params.sampwidth,
+                    channels=params.nchannels,
+                    audio=frames[offset:offset+chunk_size]
                 )
                 await client.write_event(chunk.event())
                 offset += chunk_size

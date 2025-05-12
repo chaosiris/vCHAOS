@@ -48,11 +48,58 @@ import { sendToBackend, initHotkey } from './common.js';
         };
 
         mediaRecorder.onstop = async function () {
-            const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
-            sendAudioToBackend(audioBlob);
+            const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+        
+            const arrayBuffer = await audioBlob.arrayBuffer();
+            const audioBuffer = await new AudioContext().decodeAudioData(arrayBuffer);
+        
+            const wavBlob = encodeWAV(audioBuffer);
+            sendAudioToBackend(wavBlob);
+        
             isRecording = false;
             voiceButton.style.color = "white";
         };
+        
+        // Frontend encoding function from .webm to .wav 
+        function encodeWAV(audioBuffer) {
+            const numChannels = 1;
+            const sampleRate = audioBuffer.sampleRate;
+            const format = 1; // PCM format
+            const bitDepth = 16;
+        
+            const numFrames = audioBuffer.length;
+            const buffer = new ArrayBuffer(44 + numFrames * numChannels * (bitDepth / 8));
+            const view = new DataView(buffer);
+        
+            function writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+        
+            writeString(view, 0, "RIFF");
+            view.setUint32(4, 36 + numFrames * numChannels * (bitDepth / 8), true);
+            writeString(view, 8, "WAVE");
+            writeString(view, 12, "fmt ");
+            view.setUint32(16, 16, true);
+            view.setUint16(20, format, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * numChannels * (bitDepth / 8), true);
+            view.setUint16(32, numChannels * (bitDepth / 8), true);
+            view.setUint16(34, bitDepth, true);
+            writeString(view, 36, "data");
+            view.setUint32(40, numFrames * numChannels * (bitDepth / 8), true);
+        
+            const floatData = audioBuffer.getChannelData(0);
+            let offset = 44;
+            for (let i = 0; i < numFrames; i++, offset += 2) {
+                let sample = floatData[i] * 0x7FFF;
+                view.setInt16(offset, sample, true);
+            }
+        
+            return new Blob([buffer], { type: "audio/wav" });
+        }
 
         mediaRecorder.start();
         updateStatus("listening");

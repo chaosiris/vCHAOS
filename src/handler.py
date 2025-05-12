@@ -156,6 +156,7 @@ class PiperEventHandler(AsyncEventHandler):
         backend_settings = load_backend_app_settings()
         protocol = backend_settings["protocol"]
         host = backend_settings["host"]
+        multicast = backend_settings["multicast"]
         if (host == "0.0.0.0" or host == "127.0.0.1"):
             host = "host.docker.internal"
         port = backend_settings["port"]
@@ -189,7 +190,7 @@ class PiperEventHandler(AsyncEventHandler):
 
             destination_path = os.path.join(destination_dir, os.path.basename(output_path))
             os.makedirs(destination_dir, exist_ok=True)
-            if backend_settings["multicast"]:
+            if multicast:
                 shutil.copy(output_path, destination_path)
                 _LOGGER.info(f"Copied .wav file to {destination_path}")
             else:
@@ -200,7 +201,7 @@ class PiperEventHandler(AsyncEventHandler):
             self.notify_backend(destination_path)
 
             # Generate an empty placeholder `.wav` file
-            if not backend_settings["multicast"]:
+            if not multicast:
                 with open(output_path, "wb") as empty_wav:
                     empty_wav.write(
                         b"RIFF" b"\x2C\x00\x00\x00" b"WAVE" b"fmt " b"\x10\x00\x00\x00"

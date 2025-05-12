@@ -2,6 +2,8 @@
 import pytest
 import asyncio
 import json
+import wave
+import io
 from fastapi.websockets import WebSocket, WebSocketDisconnect
 from routes.globals import connected_clients
 from app import send_voice, send_to_clients
@@ -30,12 +32,22 @@ def test_send_prompt_disconnected(client):
     response = client.post("/api/send_prompt", json={"text": ""})
     assert response.status_code == 403
 
-# Test POST /api/send_prompt
+def generate_placeholder_wav():
+    """Generate a placeholder .wav file for /api/send_voice testing"""
+    buf = io.BytesIO()
+    with wave.open(buf, 'wb') as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(44100)
+        wf.writeframes(b'\x00\x00' * 100)
+    return buf.getvalue()
+
+# Test POST /api/send_voice
 @pytest.mark.asyncio
 async def test_send_voice_success(client, setup_websocket):
     """Test successful audio transcription"""
     mock_audio_file = MagicMock()
-    mock_audio_file.read = AsyncMock(return_value=b"fake audio data")
+    mock_audio_file.read = AsyncMock(return_value=generate_placeholder_wav())
 
     mock_transcript = MagicMock()
     mock_transcript.text = "Test transcription"
